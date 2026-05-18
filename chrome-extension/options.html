@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>Click-to-call 設定</title>
+    <style>
+      body { font-family: system-ui, sans-serif; padding: 1rem; }
+      label { display: block; margin: 0.5rem 0; }
+      input { font: inherit; padding: 0.25rem 0.5rem; width: 320px; }
+      button { padding: 0.4rem 0.8rem; }
+    </style>
+  </head>
+  <body>
+    <h1>Click-to-call 設定</h1>
+    <label>PBX ベース URL <input id="baseUrl" placeholder="http://localhost:3000" /></label>
+    <label>自分の内線番号 <input id="from" placeholder="1001" /></label>
+    <button id="save">保存</button>
+    <script src="options.js"></script>
+  </body>
+</html>

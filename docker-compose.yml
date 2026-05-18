@@ -1,0 +1,77 @@
+services:
+  asterisk:
+    build:
+      context: ./asterisk
+    container_name: command-room-asterisk
+    restart: unless-stopped
+    # Mac の Docker Desktop は host network mode が beta なので、必要ポートを明示マッピング。
+    ports:
+      - "5060:5060/udp"
+      - "5060:5060/tcp"
+      - "10000-10020:10000-10020/udp"
+      - "8088:8088/tcp"
+      - "8089:8089/tcp"
+    volumes:
+      - ./asterisk/pjsip.conf:/etc/asterisk/pjsip.conf:ro
+      - ./asterisk/pjsip.d:/etc/asterisk/pjsip.d
+      - ./asterisk/dialplan.d:/etc/asterisk/dialplan.d
+      - ./asterisk/extensions.conf:/etc/asterisk/extensions.conf:ro
+      - ./asterisk/asterisk.conf:/etc/asterisk/asterisk.conf:ro
+      - ./asterisk/modules.conf:/etc/asterisk/modules.conf:ro
+      - ./asterisk/logger.conf:/etc/asterisk/logger.conf:ro
+      - ./asterisk/rtp.conf:/etc/asterisk/rtp.conf:ro
+      - ./asterisk/manager.conf:/etc/asterisk/manager.conf:ro
+      - ./asterisk/cdr.conf:/etc/asterisk/cdr.conf:ro
+      - ./asterisk/http.conf:/etc/asterisk/http.conf:ro
+      - ./asterisk/certs:/etc/asterisk/certs:ro
+      - ./asterisk/notify-event.sh:/usr/local/bin/notify-event.sh:ro
+      - ./asterisk/entrypoint.sh:/usr/local/bin/entrypoint.sh:ro
+      - ./asterisk/sounds/custom:/var/lib/asterisk/sounds/custom:ro
+      - ./data/recordings:/var/spool/asterisk/monitor
+      - ./data/signals:/signals
+      - ./data/inbox:/inbox
+      - ./data/asterisk-cdr:/var/log/asterisk/cdr-csv
+    environment:
+      INBOX_DIR: /inbox
+    command: ["/usr/local/bin/entrypoint.sh"]
+    networks:
+      - command-room
+
+  web:
+    build:
+      context: ./apps/web
+    container_name: command-room-web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data/db:/app/data/db
+      - ./data/inbox:/app/data/inbox:ro
+      - ./data/recordings:/app/data/recordings:ro
+      - ./data/asterisk-cdr:/app/data/asterisk-cdr:ro
+      - ./asterisk/sounds:/sounds
+      - ./asterisk/pjsip.d:/asterisk/pjsip.d
+      - ./asterisk/dialplan.d:/asterisk/dialplan.d
+      - ./data/signals:/asterisk/signals
+    environment:
+      NODE_ENV: production
+      DATABASE_PATH: /app/data/db/command-room.sqlite
+      RECORDINGS_DIR: /app/data/recordings
+      INBOX_DIR: /app/data/inbox
+      PJSIP_OUT_DIR: /asterisk/pjsip.d
+      DIALPLAN_OUT_DIR: /asterisk/dialplan.d
+      ASTERISK_SIGNAL_DIR: /asterisk/signals
+      AMI_HOST: asterisk
+      AMI_PORT: "5038"
+      AMI_USERNAME: command-room
+      AMI_SECRET: command-room-ami-secret
+      CDR_CSV_PATH: /app/data/asterisk-cdr/Master.csv
+      SOUNDS_DIR: /sounds
+      # Server Action のハッシュ化を再ビルド間で安定させる (古いタブからの呼び出しが 404 にならない)
+      NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: /RYJ01by2xFCY498hIqUlOMmCEG5Q/gqDZHfubOpZmA=
+    networks:
+      - command-room
+
+networks:
+  command-room:
+    driver: bridge

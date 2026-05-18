@@ -1,0 +1,262 @@
+// Asterisk Manager Interface (AMI) クライアント。
+// 依存追加なしで Node の net.Socket を使い、Action/Event を改行ベースでパースする。
+//
+// 役割:
+//   - 接続維持 (指数バックオフ再接続)
+//   - イベント購読: DeviceStateChange / ContactStatus / PeerStatus / ContactStatusDetail
+//   - メモリ上に最新の端末状態を保持
+//   - SSE 経由で UI に配信するための pub-sub
+//
+// Next.js App Router の "nodejs" runtime で常駐させる前提。
+
+import net from 'node:net';
+import { EventEmitter } from 'node:events';
+
+const HOST = process.env.AMI_HOST ?? 'asterisk';
+const PORT = Number(process.env.AMI_PORT ?? '5038');
+const USERNAME = process.env.AMI_USERNAME ?? 'command-room';
+const SECRET = process.env.AMI_SECRET ?? 'command-room-ami-secret';
+
+export type DeviceState =
+  | 'unknown'
+  | 'not_inuse'
+  | 'inuse'
+  | 'busy'
+  | 'invalid'
+  | 'unavailable'
+  | 'ringing'
+  | 'ringinuse'
+  | 'onhold';
+
+export interface DeviceInfo {
+  device: string; // e.g. "PJSIP/1001"
+  extension: string | null; // "1001"
+  state: DeviceState;
+  contact: string | null; // last seen contact URI (from ContactStatus)
+  reachable: boolean | null;
+  updatedAt: string; // ISO
+}
+
+const STATE_MAP: Record<string, DeviceState> = {
+  UNKNOWN: 'unknown',
+  NOT_INUSE: 'not_inuse',
+  INUSE: 'inuse',
+  BUSY: 'busy',
+  INVALID: 'invalid',
+  UNAVAILABLE: 'unavailable',
+  RINGING: 'ringing',
+  RINGINUSE: 'ringinuse',
+  ONHOLD: 'onhold',
+  // text variants
+  'Not in use': 'not_inuse',
+  'In use': 'inuse',
+  Busy: 'busy',
+  Ringing: 'ringing',
+  Unavailable: 'unavailable',
+};
+
+function normalizeState(s: string | undefined): DeviceState {
+  if (!s) return 'unknown';
+  return STATE_MAP[s] ?? STATE_MAP[s.toUpperCase()] ?? 'unknown';
+}
+
+function extractExt(device: string): string | null {
+  // "PJSIP/1001" → "1001"
+  const m = device.match(/^PJSIP\/([0-9a-zA-Z_]+)/);
+  return m ? m[1] : null;
+}
+
+class AmiClient extends EventEmitter {
+  private socket: net.Socket | null = null;
+  private buffer = '';
+  private actionId = 0;
+  private retries = 0;
+  private connected = false;
+  private loggedIn = false;
+  private devices = new Map<string, DeviceInfo>();
+  private destroyed = false;
+
+  start(): void {
+    if (this.connected || this.destroyed) return;
+    this.connect();
+  }
+
+  getDevices(): DeviceInfo[] {
+    return Array.from(this.devices.values()).sort((a, b) =>
+      (a.extension ?? '').localeCompare(b.extension ?? ''),
+    );
+  }
+
+  isConnected(): boolean {
+    return this.connected && this.loggedIn;
+  }
+
+  private connect(): void {
+    if (this.destroyed) return;
+    const socket = net.createConnection({ host: HOST, port: PORT }, () => {
+      this.connected = true;
+      this.retries = 0;
+      console.log(`[ami] connected to ${HOST}:${PORT}`);
+    });
+    this.socket = socket;
+    this.buffer = '';
+
+    socket.setEncoding('utf-8');
+    socket.on('data', (chunk: string) => this.onData(chunk));
+    socket.on('error', (err) => {
+      console.warn('[ami] socket error:', err.message);
+    });
+    socket.on('close', () => {
+      this.connected = false;
+      this.loggedIn = false;
+      this.socket = null;
+      if (this.destroyed) return;
+      const delay = Math.min(30_000, 1000 * Math.pow(2, this.retries++));
+      console.log(`[ami] reconnecting in ${delay}ms`);
+      setTimeout(() => this.connect(), delay);
+    });
+  }
+
+  private onData(chunk: string): void {
+    this.buffer += chunk;
+    // 最初の greeting "Asterisk Call Manager/x.y.z\r\n" は単独行で来る。
+    if (!this.loggedIn && this.buffer.startsWith('Asterisk Call Manager')) {
+      const idx = this.buffer.indexOf('\r\n');
+      if (idx >= 0) {
+        this.buffer = this.buffer.slice(idx + 2);
+        this.sendLogin();
+      }
+    }
+    // event / response は空行 "\r\n\r\n" で区切られる
+    let sep = this.buffer.indexOf('\r\n\r\n');
+    while (sep >= 0) {
+      const block = this.buffer.slice(0, sep);
+      this.buffer = this.buffer.slice(sep + 4);
+      this.handleBlock(block);
+      sep = this.buffer.indexOf('\r\n\r\n');
+    }
+  }
+
+  private sendLogin(): void {
+    this.send({
+      Action: 'Login',
+      Username: USERNAME,
+      Secret: SECRET,
+      Events: 'on',
+    });
+  }
+
+  private send(fields: Record<string, string>): void {
+    if (!this.socket) return;
+    const id = String(++this.actionId);
+    const lines = [...Object.entries({ ...fields, ActionID: id }).map(([k, v]) => `${k}: ${v}`), '', ''];
+    this.socket.write(lines.join('\r\n'));
+  }
+
+  private handleBlock(block: string): void {
+    const fields: Record<string, string> = {};
+    for (const line of block.split('\r\n')) {
+      const idx = line.indexOf(':');
+      if (idx < 0) continue;
+      const key = line.slice(0, idx).trim();
+      const value = line.slice(idx + 1).trim();
+      fields[key] = value;
+    }
+    if (fields.Response === 'Success' && fields.Message?.includes('Authentication accepted')) {
+      this.loggedIn = true;
+      console.log('[ami] authenticated');
+      // 初期 sync: 既存 endpoint と device state を取得
+      this.send({ Action: 'DeviceStateList' });
+      this.send({ Action: 'PJSIPShowEndpoints' });
+      return;
+    }
+    const event = fields.Event;
+    if (!event) return;
+
+    if (event === 'DeviceStateChange' || event === 'DeviceStateChanged' || event === 'DeviceStateList') {
+      const device = fields.Device;
+      if (!device) return;
+      const ext = extractExt(device);
+      const state = normalizeState(fields.State);
+      const cur = this.devices.get(device) ?? {
+        device,
+        extension: ext,
+        state: 'unknown' as DeviceState,
+        contact: null,
+        reachable: null,
+        updatedAt: new Date().toISOString(),
+      };
+      cur.state = state;
+      cur.updatedAt = new Date().toISOString();
+      this.devices.set(device, cur);
+      this.emit('change', cur);
+    } else if (event === 'ContactStatus' || event === 'ContactStatusDetail') {
+      // PJSIP の register 状態 (Reachable/Unreachable)
+      const ao = fields.AOR ?? fields.Aor;
+      const status = fields.Status ?? fields.ContactStatus;
+      const uri = fields.URI;
+      if (!ao) return;
+      const device = `PJSIP/${ao}`;
+      const cur = this.devices.get(device) ?? {
+        device,
+        extension: ao,
+        state: 'unknown' as DeviceState,
+        contact: null,
+        reachable: null,
+        updatedAt: new Date().toISOString(),
+      };
+      cur.contact = uri ?? cur.contact;
+      cur.reachable = status === 'Reachable' || status === 'Created' || status === 'Updated';
+      cur.updatedAt = new Date().toISOString();
+      // ContactStatus 単独では state を変えない (DeviceState 側で管理)
+      this.devices.set(device, cur);
+      this.emit('change', cur);
+    } else if (event === 'EndpointList' || event === 'EndpointDetail') {
+      const ao = fields.Aor ?? fields.ObjectName;
+      if (!ao || !/^[0-9]+$/.test(ao)) return;
+      const device = `PJSIP/${ao}`;
+      if (!this.devices.has(device)) {
+        this.devices.set(device, {
+          device,
+          extension: ao,
+          state: 'unknown',
+          contact: null,
+          reachable: null,
+          updatedAt: new Date().toISOString(),
+        });
+        this.emit('change', this.devices.get(device)!);
+      }
+    }
+  }
+
+  destroy(): void {
+    this.destroyed = true;
+    if (this.socket) {
+      this.socket.destroy();
+      this.socket = null;
+    }
+  }
+}
+
+// シングルトン (HMR / re-import で複数化しないように globalThis に保存)
+const KEY = '__commandRoomAmi';
+function getClient(): AmiClient {
+  const g = globalThis as unknown as Record<string, AmiClient | undefined>;
+  if (!g[KEY]) {
+    g[KEY] = new AmiClient();
+    g[KEY]!.start();
+  }
+  return g[KEY]!;
+}
+
+export function amiClient(): AmiClient {
+  return getClient();
+}
+
+export function listDevices(): DeviceInfo[] {
+  return getClient().getDevices();
+}
+
+export function amiIsReady(): boolean {
+  return getClient().isConnected();
+}

@@ -1,0 +1,29 @@
+node_modules/
+.next/
+.DS_Store
+.env
+.env.local
+
+# データ層 (ローカル DB / 録音 / inbox)
+data/db/*.sqlite
+data/db/*.sqlite-shm
+data/db/*.sqlite-wal
+data/recordings/*
+!data/recordings/.gitkeep
+data/inbox/*
+!data/inbox/.gitkeep
+data/signals/*
+!data/signals/.gitkeep
+data/asterisk-cdr/*
+!data/asterisk-cdr/.gitkeep
+
+# pjsip.d / dialplan.d の動的生成物 (起動時に Web が再生成)
+asterisk/pjsip.d/*.conf
+asterisk/dialplan.d/*.conf
+
+# TLS 証明書 (mkcert などローカル発行のものは公開しない)
+asterisk/certs/*.pem
+asterisk/certs/*.key
+
+# 退避済み AI 統合層 (隣に置く想定だが、誤って同梱されないよう)
+../command-room-ai/

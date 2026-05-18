@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "Command Room PBX Click-to-call",
+  "version": "0.1.0",
+  "description": "ページ上の電話番号と tel: リンクをワンクリックで内線から発信する。",
+  "permissions": ["activeTab", "storage", "contextMenus"],
+  "host_permissions": ["http://localhost:3000/*", "https://*/*"],
+  "options_page": "options.html",
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ],
+  "action": {
+    "default_title": "Click-to-call"
+  }
+}
