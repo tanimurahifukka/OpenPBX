@@ -83,6 +83,7 @@ import {
   writeTrunksConfigAndReload,
 } from '@/lib/trunks';
 import { scheduleUpgrade, deleteUpgrade } from '@/lib/upgrades';
+import { updateNetworkSettings } from '@/lib/network';
 
 function s(v: FormDataEntryValue | null): string {
   return typeof v === 'string' ? v.trim() : '';
@@ -650,6 +651,27 @@ export async function scheduleUpgradeAction(formData: FormData): Promise<void> {
       note: s(formData.get('note')) || undefined,
     });
     recordAudit({ actor: me.username, action: 'upgrade.schedule', details: { scheduledAt } });
+  });
+}
+
+export async function updateNetworkAction(formData: FormData): Promise<void> {
+  await flash('/network', 'ネットワーク設定を保存しました', async () => {
+    const me = await requireRole('admin');
+    updateNetworkSettings({
+      externalIp: s(formData.get('externalIp')) || undefined,
+      externalSignalingIp: s(formData.get('externalSignalingIp')) || undefined,
+      localNet: s(formData.get('localNet')) || undefined,
+    });
+    await writePjsipConfigAndReload();
+    recordAudit({
+      actor: me.username,
+      action: 'network.update',
+      details: {
+        externalIp: s(formData.get('externalIp')),
+        externalSignalingIp: s(formData.get('externalSignalingIp')),
+        localNet: s(formData.get('localNet')),
+      },
+    });
   });
 }
 

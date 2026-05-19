@@ -66,6 +66,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               )}
               {me?.role === 'admin' && (
                 <>
+                  <a className="rounded px-2 py-1 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500" href="/network">
+                    ネットワーク
+                  </a>
                   <a className="rounded px-2 py-1 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500" href="/trunks">
                     外線
                   </a>

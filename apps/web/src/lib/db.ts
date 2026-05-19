@@ -207,6 +207,15 @@ CREATE TABLE IF NOT EXISTS concurrency_snapshots (
   recorded_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS network_settings (
+  id              INTEGER PRIMARY KEY CHECK (id = 1),
+  external_ip     TEXT,                 -- 例: Tailscale IP (100.x.x.x) や WAN グローバル IP
+  external_signaling_ip TEXT,           -- SIP signaling 用 (省略時 external_ip と同じ)
+  local_net       TEXT,                 -- 例: "100.64.0.0/10,192.168.0.0/16" (NAT を通さない LAN 範囲)
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+INSERT OR IGNORE INTO network_settings (id) VALUES (1);
+
 CREATE TABLE IF NOT EXISTS version_upgrades (
   id           INTEGER PRIMARY KEY AUTOINCREMENT,
   scheduled_at TEXT NOT NULL,         -- UTC
@@ -283,6 +292,18 @@ export function getDb(): Database.Database {
   } catch (e) {
     console.warn('[db] bootstrap admin failed', e);
   }
+  // 起動時に pjsip.d/transports.conf と extensions.conf を最新で書き出して reload signal を投げる。
+  // 失敗してもアプリ起動は続行 (PJSIP の include に空ファイルがあれば Asterisk は問題なし)。
+  (async () => {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { writePjsipConfigAndReload } = require('./extensions') as typeof import('./extensions');
+      await writePjsipConfigAndReload();
+      console.log('[db] pjsip.d initialized on startup');
+    } catch (e) {
+      console.warn('[db] pjsip.d initial sync failed', e);
+    }
+  })();
   return db;
 }
 
