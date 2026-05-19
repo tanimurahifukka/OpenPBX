@@ -686,33 +686,6 @@ export async function deletePatientAction(formData: FormData): Promise<void> {
   });
 }
 
-export async function quickIntakeAction(formData: FormData): Promise<void> {
-  // 内線番号 + 5桁の患者番号 を受け取って、無ければ患者作成 + 起票ノード ('note' kind) を作成 → /triage に飛ぶ
-  const ext = s(formData.get('extension'));
-  const pid = s(formData.get('patientId'));
-  const note = s(formData.get('note'));
-  if (!/^\d{5}$/.test(pid)) {
-    redirect(`/quick-intake?err=${encodeURIComponent('患者番号は 5 桁の数字')}`);
-  }
-  try {
-    upsertPatient({ id: pid });
-    if (note) {
-      createPatientRecord({
-        patientId: pid,
-        extension: ext || undefined,
-        kind: 'note',
-        note,
-      });
-    }
-    const me = await requireAccount();
-    recordAudit({ actor: me.username, action: 'patient.quick_intake', target: pid, details: { ext } });
-  } catch (err) {
-    redirect(`/quick-intake?err=${encodeURIComponent((err as Error).message)}`);
-  }
-  // 問診へ自動遷移 (患者IDと内線をクエリで持って行く)
-  redirect(`/triage?patient=${encodeURIComponent(pid)}${ext ? `&ext=${encodeURIComponent(ext)}` : ''}`);
-}
-
 export async function savePatientRecordAction(formData: FormData): Promise<void> {
   const pid = s(formData.get('patientId'));
   await flash(`/patients/${pid}`, '記録を保存しました', async () => {

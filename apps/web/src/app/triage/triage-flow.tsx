@@ -300,7 +300,7 @@ export function TriageFlow({ patientId, extension }: TriageProps = {}) {
           </div>
           {!patientId && (
             <p className="mt-1 text-[10px] text-slate-500">
-              ※ <a href="/quick-intake" className="text-blue-700 underline">/quick-intake</a> から患者ID付きで開くと、ここに保存ボタンが出ます。
+              ※ <a href="/patients" className="text-blue-700 underline">/patients</a> から患者を選んで「問診を始める」で開くと、ここに保存ボタンが出ます。
             </p>
           )}
         </div>

@@ -17,14 +17,8 @@ export default async function PatientsPage({
   const recent = listRecentRecords(14, 30);
   return (
     <div className="space-y-6">
-      <header className="flex items-baseline justify-between gap-2">
+      <header>
         <h2 className="text-lg font-semibold">患者 / 記録</h2>
-        <a
-          href="/quick-intake"
-          className="rounded bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
-        >
-          + クイック起票
-        </a>
       </header>
 
       <form method="get" className="flex gap-2">
