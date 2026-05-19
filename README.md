@@ -114,6 +114,7 @@ docker compose up -d
 | `/accounts` | アカウント管理 | admin |
 | `/security` | パスワードポリシー / IP 許可リスト | admin |
 | `/trunks` | SIP trunk (外線) 設定 | admin |
+| `/network` | 外部 IP / NAT 設定 (Tailscale や WAN 越し用) | admin |
 | `/upgrades` | バージョンアップ予約 | admin |
 | `/me` | マイアカウント (表示名 / パスワード / 2FA) | self |
 
@@ -127,6 +128,47 @@ docker compose up -d
 | `9002` | 折返し依頼録音 → 同上 |
 | `*8` | 同じピックアップグループの呼出を代理応答 |
 | `6XXX` | 着信グループ番号帯 (任意) |
+
+## Tailscale で内線を外出先から使う
+
+同じ Tailnet (Tailscale 仮想ネットワーク) 上の端末を **そのまま内線として登録**できます。
+出張中の iPhone や自宅 Mac から、社内 LAN にいるかのように内線通話が可能です。
+
+### 手順
+
+1. **ホスト Mac に Tailscale を入れて Tailnet に参加**
+   ```bash
+   brew install --cask tailscale
+   open -a Tailscale     # GUI でログイン
+   tailscale ip -4       # 100.x.x.x の IP を取得
+   ```
+2. 内線で使う他端末 (iPhone / Android / Mac / Linux) を **同じ Tailnet** に追加
+3. ブラウザで <http://localhost:3000/network> を開き、
+   取得した 100.x.x.x を **External Media Address** と **External Signaling Address** に入力
+4. **Local Net** に
+   `100.64.0.0/10, 192.168.0.0/16, 10.0.0.0/8, 172.16.0.0/12` を入れて保存
+5. 出先の SIP クライアント (Groundwire / Linphone / Zoiper) で `Server` に
+   その 100.x.x.x を、`Port` に `5060` を、`Username/Password` には `/extensions` の値を入力
+
+これで Tailnet 上の任意の端末から、社内と同じ番号体系で内線通話・IVR・録音まで全部使えます。
+
+### 仕組み
+
+- `/network` で設定した値が `asterisk/pjsip.d/transports.conf` に自動反映され、Asterisk reload
+- PJSIP の transport セクションに `external_media_address` / `external_signaling_address` /
+  `local_net` を埋め込むことで、Asterisk が **NAT 越しの相手には外部 IP を、ローカル/Tailnet の
+  相手にはそのままの IP を** Contact ヘッダ・RTP に書き分ける
+- ホスト Mac の Tailscale が `100.x.x.x:5060` を listen し、Docker Desktop の port publish
+  経由で Asterisk container に転送
+
+### トラブルシュート
+
+- **音が片方向**: RTP ポート (10000-10020/udp) が Tailscale でも通る必要あり。Tailscale は
+  UDP をそのまま通すので通常は OK。Mac のファイアウォールで Docker への UDP を許可
+- **登録は通るが通話が切れる**: Local Net 設定漏れ。LAN の CIDR (例 `192.168.0.0/16`) が
+  Local Net に含まれていないと、LAN 内通話でも NAT 書換が暴発する
+- **WAN グローバル IP でも同じ仕組みで動く**: ルータの 5060 + 10000-10020 を forward すれば
+  Tailscale を使わずに同じ設定で WAN 公開も可能 (推奨はしない、Tailscale 経由の方が安全)
 
 ## WebRTC ソフトフォン (ブラウザ電話)
 
