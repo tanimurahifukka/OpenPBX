@@ -303,6 +303,15 @@ export function getDb(): Database.Database {
     } catch (e) {
       console.warn('[db] pjsip.d initial sync failed', e);
     }
+    try {
+      // CDR を 10 秒ごとに ingest するループを起動時に開始 (/cdr を開かなくても動く)
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { startCdrIngestLoop } = require('./cdr') as typeof import('./cdr');
+      startCdrIngestLoop();
+      console.log('[db] CDR ingest loop started');
+    } catch (e) {
+      console.warn('[db] CDR ingest loop start failed', e);
+    }
   })();
   return db;
 }

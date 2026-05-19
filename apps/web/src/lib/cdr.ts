@@ -30,25 +30,19 @@ interface CdrRow {
   uniqueid: string;
 }
 
-const FIELDS = [
-  'accountcode',
-  'src',
-  'dst',
-  'dcontext',
-  'clid',
-  'channel',
-  'dstchannel',
-  'lastapp',
-  'lastdata',
-  'start',
-  'answer',
-  'end',
-  'duration',
-  'billsec',
-  'disposition',
-  'amaflag',
-  'userfield',
-  'uniqueid',
+// Asterisk の cdr_csv は version によりフィールド数が変わる。
+// 古い版: 18 列 (userfield あり)
+// 21+ : 17 列 (userfield 省略、最後が uniqueid)
+// 順序は固定なので、 cols.length が 17 か 18 かで uniqueid 位置を判定する。
+const FIELDS_18 = [
+  'accountcode', 'src', 'dst', 'dcontext', 'clid', 'channel', 'dstchannel',
+  'lastapp', 'lastdata', 'start', 'answer', 'end', 'duration', 'billsec',
+  'disposition', 'amaflag', 'userfield', 'uniqueid',
+] as const;
+const FIELDS_17 = [
+  'accountcode', 'src', 'dst', 'dcontext', 'clid', 'channel', 'dstchannel',
+  'lastapp', 'lastdata', 'start', 'answer', 'end', 'duration', 'billsec',
+  'disposition', 'amaflag', 'uniqueid',
 ] as const;
 
 function parseCsvLine(line: string): string[] {
@@ -81,9 +75,13 @@ function parseCsvLine(line: string): string[] {
 }
 
 function rowFromCols(cols: string[]): CdrRow | null {
-  if (cols.length < FIELDS.length) return null;
   const row = {} as Record<string, string>;
-  for (let i = 0; i < FIELDS.length; i++) row[FIELDS[i]] = cols[i] ?? '';
+  let fields: readonly string[];
+  if (cols.length >= 18) fields = FIELDS_18;
+  else if (cols.length >= 17) fields = FIELDS_17;
+  else return null;
+  for (let i = 0; i < fields.length; i++) row[fields[i]] = cols[i] ?? '';
+  if (!row.userfield) row.userfield = '';
   return row as unknown as CdrRow;
 }
 
