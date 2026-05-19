@@ -84,6 +84,13 @@ import {
 } from '@/lib/trunks';
 import { scheduleUpgrade, deleteUpgrade } from '@/lib/upgrades';
 import { updateNetworkSettings } from '@/lib/network';
+import {
+  upsertPatient,
+  deletePatient,
+  createPatientRecord,
+  deletePatientRecord,
+  InvalidPatientError,
+} from '@/lib/patients';
 
 function s(v: FormDataEntryValue | null): string {
   return typeof v === 'string' ? v.trim() : '';
@@ -651,6 +658,83 @@ export async function scheduleUpgradeAction(formData: FormData): Promise<void> {
       note: s(formData.get('note')) || undefined,
     });
     recordAudit({ actor: me.username, action: 'upgrade.schedule', details: { scheduledAt } });
+  });
+}
+
+export async function upsertPatientAction(formData: FormData): Promise<void> {
+  const id = s(formData.get('id'));
+  await flash(`/patients/${id}`, '患者情報を保存しました', async () => {
+    const me = await requireAccount();
+    upsertPatient({
+      id,
+      name: s(formData.get('name')) || undefined,
+      kana: s(formData.get('kana')) || undefined,
+      birthDate: s(formData.get('birthDate')) || undefined,
+      phone: s(formData.get('phone')) || undefined,
+      note: s(formData.get('note')) || undefined,
+    });
+    recordAudit({ actor: me.username, action: 'patient.upsert', target: id });
+  });
+}
+
+export async function deletePatientAction(formData: FormData): Promise<void> {
+  await flash('/patients', '患者を削除しました', async () => {
+    const me = await requireRole('admin', 'supervisor');
+    const id = s(formData.get('id'));
+    deletePatient(id);
+    recordAudit({ actor: me.username, action: 'patient.delete', target: id });
+  });
+}
+
+export async function quickIntakeAction(formData: FormData): Promise<void> {
+  // 内線番号 + 5桁の患者番号 を受け取って、無ければ患者作成 + 起票ノード ('note' kind) を作成 → /triage に飛ぶ
+  const ext = s(formData.get('extension'));
+  const pid = s(formData.get('patientId'));
+  const note = s(formData.get('note'));
+  if (!/^\d{5}$/.test(pid)) {
+    redirect(`/quick-intake?err=${encodeURIComponent('患者番号は 5 桁の数字')}`);
+  }
+  try {
+    upsertPatient({ id: pid });
+    if (note) {
+      createPatientRecord({
+        patientId: pid,
+        extension: ext || undefined,
+        kind: 'note',
+        note,
+      });
+    }
+    const me = await requireAccount();
+    recordAudit({ actor: me.username, action: 'patient.quick_intake', target: pid, details: { ext } });
+  } catch (err) {
+    redirect(`/quick-intake?err=${encodeURIComponent((err as Error).message)}`);
+  }
+  // 問診へ自動遷移 (患者IDと内線をクエリで持って行く)
+  redirect(`/triage?patient=${encodeURIComponent(pid)}${ext ? `&ext=${encodeURIComponent(ext)}` : ''}`);
+}
+
+export async function savePatientRecordAction(formData: FormData): Promise<void> {
+  const pid = s(formData.get('patientId'));
+  await flash(`/patients/${pid}`, '記録を保存しました', async () => {
+    const me = await requireAccount();
+    createPatientRecord({
+      patientId: pid,
+      extension: s(formData.get('extension')) || undefined,
+      kind: (s(formData.get('kind')) as 'triage' | 'call' | 'note') || 'note',
+      summary: s(formData.get('summary')) || undefined,
+      note: s(formData.get('note')) || undefined,
+    });
+    recordAudit({ actor: me.username, action: 'patient.record.create', target: pid });
+  });
+}
+
+export async function deletePatientRecordAction(formData: FormData): Promise<void> {
+  const pid = s(formData.get('patientId'));
+  await flash(`/patients/${pid}`, '記録を削除しました', async () => {
+    const me = await requireRole('admin', 'supervisor');
+    const id = Number(formData.get('id'));
+    deletePatientRecord(id);
+    recordAudit({ actor: me.username, action: 'patient.record.delete', target: String(id) });
   });
 }
 

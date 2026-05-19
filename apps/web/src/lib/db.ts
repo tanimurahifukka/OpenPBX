@@ -216,6 +216,33 @@ CREATE TABLE IF NOT EXISTS network_settings (
 );
 INSERT OR IGNORE INTO network_settings (id) VALUES (1);
 
+CREATE TABLE IF NOT EXISTS patients (
+  id           TEXT PRIMARY KEY,
+  name         TEXT,
+  kana         TEXT,
+  birth_date   TEXT,
+  phone        TEXT,
+  note         TEXT,
+  updated_at   TEXT NOT NULL DEFAULT (datetime('now')),
+  created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+  CHECK (length(id) = 5 AND id GLOB '[0-9][0-9][0-9][0-9][0-9]')
+);
+CREATE INDEX IF NOT EXISTS idx_patients_kana ON patients(kana);
+CREATE INDEX IF NOT EXISTS idx_patients_name ON patients(name);
+
+CREATE TABLE IF NOT EXISTS patient_records (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  patient_id    TEXT NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+  extension     TEXT,
+  recorded_at   TEXT NOT NULL DEFAULT (datetime('now')),
+  kind          TEXT NOT NULL DEFAULT 'note',
+  summary       TEXT,
+  note          TEXT,
+  recommendations_json TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_patient_records_pid ON patient_records(patient_id, recorded_at DESC);
+CREATE INDEX IF NOT EXISTS idx_patient_records_date ON patient_records(recorded_at DESC);
+
 CREATE TABLE IF NOT EXISTS version_upgrades (
   id           INTEGER PRIMARY KEY AUTOINCREMENT,
   scheduled_at TEXT NOT NULL,         -- UTC

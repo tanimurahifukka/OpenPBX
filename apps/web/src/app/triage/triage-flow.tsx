@@ -10,12 +10,18 @@ interface Step {
   flag?: FlowOption['flag'];
 }
 
-export function TriageFlow() {
+interface TriageProps {
+  patientId?: string;
+  extension?: string;
+}
+
+export function TriageFlow({ patientId, extension }: TriageProps = {}) {
   const [currentId, setCurrentId] = useState<string>('start');
   const [history, setHistory] = useState<Step[]>([]);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [endText, setEndText] = useState<string | null>(null);
   const [memo, setMemo] = useState<string>('');
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   const node = FLOW[currentId];
 
@@ -247,7 +253,7 @@ export function TriageFlow() {
           <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded bg-slate-50 p-2 font-mono text-[11px] text-slate-700">
 {finalText}
           </pre>
-          <div className="mt-2 flex gap-2">
+          <div className="mt-2 flex flex-wrap gap-2">
             <CopyButton text={finalText} />
             <button
               type="button"
@@ -256,7 +262,47 @@ export function TriageFlow() {
             >
               印刷
             </button>
+            {patientId && (
+              <button
+                type="button"
+                disabled={saveState === 'saving' || saveState === 'saved'}
+                onClick={async () => {
+                  setSaveState('saving');
+                  const fd = new FormData();
+                  fd.set('patientId', patientId);
+                  if (extension) fd.set('extension', extension);
+                  fd.set('kind', 'triage');
+                  fd.set('summary', finalText);
+                  const res = await fetch('/api/patients/records', {
+                    method: 'POST',
+                    body: fd,
+                  });
+                  setSaveState(res.ok ? 'saved' : 'error');
+                  setTimeout(() => setSaveState('idle'), 2500);
+                }}
+                className={`rounded px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60 ${
+                  saveState === 'saved'
+                    ? 'bg-emerald-700'
+                    : saveState === 'error'
+                      ? 'bg-red-700'
+                      : 'bg-blue-600 hover:bg-blue-700'
+                }`}
+              >
+                {saveState === 'saved'
+                  ? '✓ 保存しました'
+                  : saveState === 'error'
+                    ? '失敗'
+                    : saveState === 'saving'
+                      ? '保存中…'
+                      : `💾 患者 ${patientId} に保存`}
+              </button>
+            )}
           </div>
+          {!patientId && (
+            <p className="mt-1 text-[10px] text-slate-500">
+              ※ <a href="/quick-intake" className="text-blue-700 underline">/quick-intake</a> から患者ID付きで開くと、ここに保存ボタンが出ます。
+            </p>
+          )}
         </div>
       </aside>
     </div>

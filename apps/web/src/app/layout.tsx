@@ -41,6 +41,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <a className="rounded px-2 py-1 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500" href="/triage">
                 問診フロー
               </a>
+              <a className="rounded bg-blue-600 px-2 py-1 font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500" href="/quick-intake">
+                + 起票
+              </a>
+              <a className="rounded px-2 py-1 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500" href="/patients">
+                患者
+              </a>
               <a className="rounded px-2 py-1 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500" href="/extensions">
                 端末管理
               </a>
