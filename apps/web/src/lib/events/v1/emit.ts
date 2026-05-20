@@ -62,18 +62,61 @@ export interface ExternalEventEnvelope {
   metadataJson: OpenpbxEventV1;
 }
 
+// kind → 日本語ラベル (UI の WorkItem title 用)。
+// 未知 kind は raw を返す (contract が future-extend されたとき WorkItem 側を
+// 壊さない)。
+function jaLabelForKind(kind: string): string {
+  switch (kind) {
+    case 'same_day_reservation':
+      return '当日予約';
+    case 'callback_request':
+      return '折返し依頼';
+    case 'no_recording':
+      return '録音なし';
+    default:
+      return kind;
+  }
+}
+
+// "21:15" のような時計表示 (orchestrator fallback が title に時刻を含めないので
+// caller 別の通話を見分けるためここで足す)。
+function formatJstClock(iso: string): string {
+  try {
+    const d = new Date(iso);
+    // UTC+9 を ad-hoc に: 元 ISO の Z 部分を足す。
+    const utc = d.getTime();
+    const jst = new Date(utc + 9 * 60 * 60 * 1000);
+    const hh = String(jst.getUTCHours()).padStart(2, '0');
+    const mm = String(jst.getUTCMinutes()).padStart(2, '0');
+    return `${hh}:${mm}`;
+  } catch {
+    return '';
+  }
+}
+
 export function buildEnvelope(event: OpenpbxEventV1, cfg: EmitConfig): ExternalEventEnvelope {
   const recordingRel = event.recording?.relativePath ?? null;
   const uri = recordingRel
     ? `pbx://${event.pbxInstanceId}/${event.call.uniqueId}/${recordingRel}`
     : `pbx://${event.pbxInstanceId}/${event.call.uniqueId}`;
   const sourceAccountId = cfg.sourceAccountId ?? `pbx:${event.pbxInstanceId}`;
+
+  // WorkItem の title で 1 通話 1 行が見分けられるよう、caller と発生時刻 (JST)
+  // と uniqueId 末尾 (衝突避け) を含める。
+  const label = jaLabelForKind(event.call.kind);
+  const clock = formatJstClock(event.receivedAt);
+  const callerLabel = event.call.callerName?.trim() || event.call.callerId || 'unknown';
+  const uniqueShort = event.call.uniqueId.split('.')[0] || event.call.uniqueId;
+  const summary = clock
+    ? `[${clock}] ${label} (${event.call.extension}) ${callerLabel} #${uniqueShort}`
+    : `${label} (${event.call.extension}) ${callerLabel} #${uniqueShort}`;
+
   return {
     workspaceId: cfg.workspaceId,
     sourceType: 'phone_stt',
     sourceAccountId,
     externalId: event.eventId,
-    summary: `OpenPBX ${event.call.kind} (${event.call.extension})`,
+    summary,
     localPointer: {
       type: 'pbx_edge',
       pbxInstanceId: event.pbxInstanceId,
