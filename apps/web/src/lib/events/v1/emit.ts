@@ -17,6 +17,10 @@ import type { OpenpbxEventV1 } from './schema';
 export interface EmitConfig {
   endpoint: string;
   token: string;
+  /** command-room の Workspace UUID。OpenpbxEventV1.workspaceExternalKey とは別。 */
+  workspaceId: string;
+  /** command-room SourceAccount.id（任意、未指定なら pbxInstanceId プレフィックスから生成）。 */
+  sourceAccountId: string | null;
   batchLimit: number;
   timeoutMs: number;
 }
@@ -24,27 +28,60 @@ export interface EmitConfig {
 export function resolveEmitConfig(): EmitConfig | null {
   const endpoint = process.env.EVENT_PUSH_URL;
   const token = process.env.EVENT_PUSH_TOKEN;
-  if (!endpoint || !token) return null;
+  const workspaceId = process.env.EVENT_PUSH_WORKSPACE_ID;
+  if (!endpoint || !token || !workspaceId) return null;
+  const sourceAccountId = process.env.EVENT_PUSH_SOURCE_ACCOUNT_ID || null;
   const batchLimit = Number(process.env.EVENT_PUSH_BATCH ?? '20') || 20;
   const timeoutMs = Number(process.env.EVENT_PUSH_TIMEOUT_MS ?? '15000') || 15_000;
-  return { endpoint, token, batchLimit, timeoutMs };
+  return { endpoint, token, workspaceId, sourceAccountId, batchLimit, timeoutMs };
 }
 
-// command-room /api/v1/external-events に乗せる envelope。
-// 形は contracts/openpbx-event-v1.md §3.2 と整合。
+// command-room /api/v1/external-events の `incomingUpsertPayloadSchema` (strict) に
+// 整合する envelope。
+//
+// 重要:
+//   - sourceType は command-room の `IngestSourceType` enum 値を使う必要があり、
+//     OpenPBX 由来は既存 "phone_stt" を再利用する（新 enum 値を追加しない方針）。
+//   - localPointer.type="pbx_edge" は command-room PR2 で追加した discriminated
+//     union variant。recordingRelativePath は recording null のとき null。
+//   - metadataJson に OpenpbxEventV1 本体を入れる。command-room 側 upsert は
+//     metadataJson.kind を top-level に昇格して AutomationRule にかける。
 export interface ExternalEventEnvelope {
-  sourceType: 'pbx_edge';
+  workspaceId: string;
+  sourceType: 'phone_stt';
   sourceAccountId: string;
   externalId: string;
-  payload: OpenpbxEventV1;
+  summary?: string;
+  localPointer: {
+    type: 'pbx_edge';
+    pbxInstanceId: string;
+    uniqueId: string;
+    recordingRelativePath: string | null;
+    uri: string;
+  };
+  metadataJson: OpenpbxEventV1;
 }
 
-export function buildEnvelope(event: OpenpbxEventV1): ExternalEventEnvelope {
+export function buildEnvelope(event: OpenpbxEventV1, cfg: EmitConfig): ExternalEventEnvelope {
+  const recordingRel = event.recording?.relativePath ?? null;
+  const uri = recordingRel
+    ? `pbx://${event.pbxInstanceId}/${event.call.uniqueId}/${recordingRel}`
+    : `pbx://${event.pbxInstanceId}/${event.call.uniqueId}`;
+  const sourceAccountId = cfg.sourceAccountId ?? `pbx:${event.pbxInstanceId}`;
   return {
-    sourceType: 'pbx_edge',
-    sourceAccountId: event.pbxInstanceId,
+    workspaceId: cfg.workspaceId,
+    sourceType: 'phone_stt',
+    sourceAccountId,
     externalId: event.eventId,
-    payload: event,
+    summary: `OpenPBX ${event.call.kind} (${event.call.extension})`,
+    localPointer: {
+      type: 'pbx_edge',
+      pbxInstanceId: event.pbxInstanceId,
+      uniqueId: event.call.uniqueId,
+      recordingRelativePath: recordingRel,
+      uri,
+    },
+    metadataJson: event,
   };
 }
 
@@ -75,9 +112,11 @@ export async function pushOne(
       signal: ctrl.signal,
       headers: {
         'content-type': 'application/json',
-        authorization: `Bearer ${cfg.token}`,
+        // command-room 側 /api/v1/external-events は X-Command-Room-Device-Token を読む
+        // (LocalNode device-token 認証経路)。Authorization Bearer ではない。
+        'x-command-room-device-token': cfg.token,
       },
-      body: JSON.stringify(buildEnvelope(event)),
+      body: JSON.stringify(buildEnvelope(event, cfg)),
     });
   } catch (e) {
     clearTimeout(t);
