@@ -18,6 +18,7 @@ export class InvalidExtensionError extends Error {}
 
 const NUMBER_RE = /^[0-9]{2,6}$/; // 内線番号: 2〜6桁の数字
 const PJSIP_OUT_DIR = process.env.PJSIP_OUT_DIR ?? '/asterisk/pjsip.d';
+const DIALPLAN_OUT_DIR = process.env.DIALPLAN_OUT_DIR ?? '/asterisk/dialplan.d';
 const ASTERISK_SIGNAL_DIR = process.env.ASTERISK_SIGNAL_DIR ?? '/asterisk/signals';
 
 interface ExtensionRow {
