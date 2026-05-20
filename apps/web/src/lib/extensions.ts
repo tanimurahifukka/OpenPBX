@@ -248,6 +248,34 @@ export async function writePjsipConfigAndReload(): Promise<{ path: string; reloa
   const outPath = path.join(PJSIP_OUT_DIR, 'extensions.conf');
   await fs.writeFile(outPath, content, 'utf-8');
 
+  // Asterisk の #include は対象ファイルが無い / glob 0 件マッチで親 conf
+  // 全体を parse error にする。最低 1 ファイル保証で防ぐ:
+  //   - pjsip.conf -> #include "pjsip.d/trunks.conf"
+  //     trunks 未設定で trunks.conf が無いと endpoint / transport / auth 全消失
+  //   - extensions.conf -> #include "dialplan.d/*.conf"
+  //     dialplan.d/ が空だと pbx_config declined to load → 内線→特番が Not Found
+  const trunksPath = path.join(PJSIP_OUT_DIR, 'trunks.conf');
+  try {
+    await fs.access(trunksPath);
+  } catch {
+    await fs.writeFile(
+      trunksPath,
+      '; placeholder (no SIP trunks configured yet; /trunks Server Action overwrites this)\n',
+      'utf-8',
+    );
+  }
+  await fs.mkdir(DIALPLAN_OUT_DIR, { recursive: true });
+  const dialplanPlaceholder = path.join(DIALPLAN_OUT_DIR, '_placeholder.conf');
+  try {
+    await fs.access(dialplanPlaceholder);
+  } catch {
+    await fs.writeFile(
+      dialplanPlaceholder,
+      '; placeholder (Asterisk #include "dialplan.d/*.conf" requires >=1 file)\n',
+      'utf-8',
+    );
+  }
+
   let reloaded = false;
   try {
     await fs.mkdir(ASTERISK_SIGNAL_DIR, { recursive: true });
