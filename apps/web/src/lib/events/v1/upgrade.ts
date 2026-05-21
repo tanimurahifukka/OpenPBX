@@ -26,10 +26,16 @@ const DEFAULT_KIND_DIRECTION: Record<EventKind, CallDirection> = {
   same_day_reservation: 'inbound',
   callback_request: 'inbound',
   no_recording: 'inbound',
+  internal_call: 'internal',
 };
 
 function inferKind(raw: string): EventKind {
-  if (raw === 'same_day_reservation' || raw === 'callback_request' || raw === 'no_recording') {
+  if (
+    raw === 'same_day_reservation' ||
+    raw === 'callback_request' ||
+    raw === 'no_recording' ||
+    raw === 'internal_call'
+  ) {
     return raw;
   }
   // 未知 kind は明示的に no_recording 扱いにせず例外を投げる。

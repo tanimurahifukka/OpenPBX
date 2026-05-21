@@ -73,6 +73,8 @@ function jaLabelForKind(kind: string): string {
       return '折返し依頼';
     case 'no_recording':
       return '録音なし';
+    case 'internal_call':
+      return '内線通話';
     default:
       return kind;
   }
