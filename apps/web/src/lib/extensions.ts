@@ -110,8 +110,9 @@ export function deleteExtension(number: string, db: Database.Database = getDb())
 }
 
 // PJSIP transport セクション (UDP/TCP/WSS) を生成する。
-// Tailscale や WAN 越しでも RTP / Contact ヘッダが正しい IP を返すよう、
-// network_settings の external_media_address / local_net を埋め込む。
+// Docker Desktop 上ではスマホや Tailnet の CIDR を local_net に入れると
+// external_* の書き換えが止まりやすい。通常は external_* のみを設定し、
+// local_net は Asterisk から直接到達できるネットワークに限る。
 export function renderTransportConfig(): string {
   const net = getNetworkSettings();
   const lines: string[] = [];
@@ -138,6 +139,7 @@ export function renderTransportConfig(): string {
   lines.push('type=transport');
   lines.push('protocol=udp');
   lines.push('bind=0.0.0.0:5060');
+  lines.push('allow_reload=yes');
   for (const e of renderExtras()) lines.push(e);
   lines.push('');
 
@@ -146,6 +148,7 @@ export function renderTransportConfig(): string {
   lines.push('type=transport');
   lines.push('protocol=tcp');
   lines.push('bind=0.0.0.0:5060');
+  lines.push('allow_reload=yes');
   for (const e of renderExtras()) lines.push(e);
   lines.push('');
 
@@ -154,6 +157,7 @@ export function renderTransportConfig(): string {
   lines.push('type=transport');
   lines.push('protocol=wss');
   lines.push('bind=0.0.0.0:8089');
+  lines.push('allow_reload=yes');
   lines.push('cert_file=/etc/asterisk/certs/asterisk.pem');
   lines.push('priv_key_file=/etc/asterisk/certs/asterisk.key');
   for (const e of renderExtras()) lines.push(e);
@@ -201,7 +205,7 @@ export function renderTransportConfig(): string {
 
   lines.push('[aor-single](!)');
   lines.push('type=aor');
-  lines.push('max_contacts=2');
+  lines.push('max_contacts=1');
   lines.push('remove_existing=yes');
   lines.push('qualify_frequency=30');
   lines.push('');

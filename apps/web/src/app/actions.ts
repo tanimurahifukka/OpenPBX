@@ -65,8 +65,9 @@ import {
   deleteIvrMenu,
   getIvrMenu,
   writeIvrDialplanAndReload,
-  type IvrOption,
-  type IvrAction,
+  parseIvrOptionLines,
+  parseCallerIdRouteLines,
+  type AfterHoursAction,
 } from '@/lib/ivr';
 import { deleteGuidance } from '@/lib/guidances';
 import { signalAsteriskReload } from '@/lib/dialplan';
@@ -329,26 +330,14 @@ export async function deleteTimeRuleAction(formData: FormData): Promise<void> {
 }
 
 // ---- IVR ----
-function parseIvrOptions(raw: string): IvrOption[] {
-  const out: IvrOption[] = [];
-  for (const line of raw.split(/\r?\n/)) {
-    const t = line.trim();
-    if (!t) continue;
-    const [digit, action, target, label] = t.split('|').map((x) => x?.trim() ?? '');
-    if (!digit || !action) continue;
-    out.push({
-      digit,
-      action: action as IvrAction,
-      target: target || null,
-      label: label || null,
-    });
-  }
-  return out;
-}
-
 export async function upsertIvrAction(formData: FormData): Promise<void> {
   await flash('/ivr', 'IVR を保存しました', async () => {
     const number = s(formData.get('number'));
+    const afterHoursRaw = s(formData.get('afterHoursAction'));
+    const afterHoursAction: AfterHoursAction | null =
+      afterHoursRaw === 'goto_ivr' || afterHoursRaw === 'goto_extension' || afterHoursRaw === 'hangup'
+        ? afterHoursRaw
+        : null;
     const input = {
       number,
       name: s(formData.get('name')) || undefined,
@@ -358,7 +347,10 @@ export async function upsertIvrAction(formData: FormData): Promise<void> {
       goodbyePrompt: s(formData.get('goodbyePrompt')) || undefined,
       maxRetries: Number(formData.get('maxRetries')) || 3,
       waitSeconds: Number(formData.get('waitSeconds')) || 6,
-      options: parseIvrOptions(s(formData.get('options'))),
+      afterHoursAction,
+      afterHoursTarget: s(formData.get('afterHoursTarget')) || null,
+      callerIdRoutes: parseCallerIdRouteLines(s(formData.get('callerIdRoutes'))),
+      options: parseIvrOptionLines(s(formData.get('options'))),
     };
     if (getIvrMenu(number)) {
       updateIvrMenu(input);

@@ -2,7 +2,7 @@ services:
   asterisk:
     build:
       context: ./asterisk
-    container_name: command-room-asterisk
+    container_name: openpbx-asterisk
     restart: unless-stopped
     # Mac の Docker Desktop は host network mode が beta なので、必要ポートを明示マッピング。
     ports:
@@ -35,12 +35,12 @@ services:
       INBOX_DIR: /inbox
     command: ["/usr/local/bin/entrypoint.sh"]
     networks:
-      - command-room
+      - openpbx
 
   web:
     build:
       context: ./apps/web
-    container_name: command-room-web
+    container_name: openpbx-web
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -63,15 +63,15 @@ services:
       ASTERISK_SIGNAL_DIR: /asterisk/signals
       AMI_HOST: asterisk
       AMI_PORT: "5038"
-      AMI_USERNAME: command-room
-      AMI_SECRET: command-room-ami-secret
+      AMI_USERNAME: openpbx
+      AMI_SECRET: openpbx-ami-secret
       CDR_CSV_PATH: /app/data/asterisk-cdr/Master.csv
       SOUNDS_DIR: /sounds
       # Server Action のハッシュ化を再ビルド間で安定させる (古いタブからの呼び出しが 404 にならない)
       NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: /RYJ01by2xFCY498hIqUlOMmCEG5Q/gqDZHfubOpZmA=
     networks:
-      - command-room
+      - openpbx
 
 networks:
-  command-room:
+  openpbx:
     driver: bridge

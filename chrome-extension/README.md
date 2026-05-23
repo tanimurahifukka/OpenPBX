@@ -1,4 +1,4 @@
-# Command Room Click-to-call Chrome Extension
+# OpenPBX Click-to-call Chrome Extension
 
 ## インストール
 
@@ -11,7 +11,7 @@
 
 - 任意ページの `<a href="tel:...">` リンクをクリック → 自動で内線→相手に発信
 - 平文の電話番号は自動で点線下線が付いて click 対応
-- 番号を選択 → 右クリック → 「Command Room で発信」でも可
+- 番号を選択 → 右クリック → 「OpenPBX で発信」でも可
 
 ## 認証
 

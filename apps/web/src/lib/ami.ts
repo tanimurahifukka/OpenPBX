@@ -14,8 +14,8 @@ import { EventEmitter } from 'node:events';
 
 const HOST = process.env.AMI_HOST ?? 'asterisk';
 const PORT = Number(process.env.AMI_PORT ?? '5038');
-const USERNAME = process.env.AMI_USERNAME ?? 'command-room';
-const SECRET = process.env.AMI_SECRET ?? 'command-room-ami-secret';
+const USERNAME = process.env.AMI_USERNAME ?? 'openpbx';
+const SECRET = process.env.AMI_SECRET ?? 'openpbx-ami-secret';
 
 export type DeviceState =
   | 'unknown'

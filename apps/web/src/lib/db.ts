@@ -102,16 +102,18 @@ CREATE TABLE IF NOT EXISTS time_rules (
 );
 
 CREATE TABLE IF NOT EXISTS ivr_menus (
-  id              INTEGER PRIMARY KEY AUTOINCREMENT,
-  number          TEXT NOT NULL UNIQUE,
-  name            TEXT,
-  welcome_prompt  TEXT,                       -- sounds/<path>
-  menu_prompt     TEXT,                       -- sounds/<path>
-  invalid_prompt  TEXT,
-  goodbye_prompt  TEXT,
-  max_retries     INTEGER NOT NULL DEFAULT 3,
-  wait_seconds    INTEGER NOT NULL DEFAULT 6,
-  updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+  id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+  number              TEXT NOT NULL UNIQUE,
+  name                TEXT,
+  welcome_prompt      TEXT,                   -- sounds/<path>
+  menu_prompt         TEXT,                   -- sounds/<path>
+  invalid_prompt      TEXT,
+  goodbye_prompt      TEXT,
+  max_retries         INTEGER NOT NULL DEFAULT 3,
+  wait_seconds        INTEGER NOT NULL DEFAULT 6,
+  after_hours_action  TEXT,                   -- 'goto_ivr' | 'goto_extension' | 'hangup' | NULL
+  after_hours_target  TEXT,
+  updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS ivr_options (
@@ -122,6 +124,18 @@ CREATE TABLE IF NOT EXISTS ivr_options (
   label        TEXT,
   PRIMARY KEY (ivr_menu_id, digit)
 );
+
+CREATE TABLE IF NOT EXISTS ivr_caller_id_routes (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  ivr_menu_id   INTEGER NOT NULL REFERENCES ivr_menus(id) ON DELETE CASCADE,
+  position      INTEGER NOT NULL DEFAULT 0,
+  pattern       TEXT NOT NULL,             -- '0312345678' or '090*'
+  action        TEXT NOT NULL,             -- 'goto_ivr' | 'goto_extension' | 'hangup'
+  target        TEXT,
+  label         TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_ivr_cid_routes_menu
+  ON ivr_caller_id_routes(ivr_menu_id, position);
 
 CREATE TABLE IF NOT EXISTS guidances (
   name        TEXT PRIMARY KEY,
@@ -211,7 +225,7 @@ CREATE TABLE IF NOT EXISTS network_settings (
   id              INTEGER PRIMARY KEY CHECK (id = 1),
   external_ip     TEXT,                 -- 例: Tailscale IP (100.x.x.x) や WAN グローバル IP
   external_signaling_ip TEXT,           -- SIP signaling 用 (省略時 external_ip と同じ)
-  local_net       TEXT,                 -- 例: "100.64.0.0/10,192.168.0.0/16" (NAT を通さない LAN 範囲)
+  local_net       TEXT,                 -- Docker Desktop では通常 NULL。Asterisk が直接到達できる CIDR のみ指定
   updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
 INSERT OR IGNORE INTO network_settings (id) VALUES (1);
@@ -292,10 +306,61 @@ export function applySchema(db: Database.Database): void {
   db.pragma('foreign_keys = ON');
   db.exec(SCHEMA);
   migrateExtensions(db);
+  migrateIvrMenus(db);
   db.exec(SEED_EXTENSIONS);
+  seedDefaultIvr(db);
+}
+
+function seedDefaultIvr(db: Database.Database): void {
+  // user_version >= 1 なら seed 済み (ユーザーが 9000 を削除しても再投入しない)。
+  const userVersion = db.pragma('user_version', { simple: true }) as number;
+  if (userVersion >= 1) return;
+
+  const row = db.prepare('SELECT COUNT(*) AS count FROM ivr_menus').get() as { count: number };
+  if (row.count === 0) {
+    const seed = db.transaction(() => {
+      const info = db
+        .prepare(
+          `INSERT INTO ivr_menus (number, name, welcome_prompt, menu_prompt, invalid_prompt, goodbye_prompt,
+                                  max_retries, wait_seconds, after_hours_action, after_hours_target, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, datetime('now'))`,
+        )
+        .run(
+          '9000',
+          'メインメニュー',
+          'custom/ivr-welcome',
+          'custom/ivr-menu',
+          'custom/ivr-invalid',
+          'custom/ivr-goodbye',
+          3,
+          6,
+        );
+      const menuId = Number(info.lastInsertRowid);
+      const insertOption = db.prepare(
+        'INSERT INTO ivr_options (ivr_menu_id, digit, action, target, label) VALUES (?, ?, ?, ?, ?)',
+      );
+      insertOption.run(menuId, '1', 'goto_extension', '9001', '当日予約');
+      insertOption.run(menuId, '2', 'goto_extension', '9002', '折返し依頼');
+      insertOption.run(menuId, '0', 'goto_extension', '1001', 'スタッフ');
+    });
+    seed();
+  }
+  // 既存 DB (count > 0) と新規 seed 済みの両方で「以降は再 seed 不要」マーク。
+  db.pragma('user_version = 1');
 }
 
 // 既存DBに対する冪等マイグレーション。
+function migrateIvrMenus(db: Database.Database): void {
+  const cols = db.prepare(`PRAGMA table_info(ivr_menus)`).all() as Array<{ name: string }>;
+  const names = new Set(cols.map((c) => c.name));
+  if (!names.has('after_hours_action')) {
+    db.exec(`ALTER TABLE ivr_menus ADD COLUMN after_hours_action TEXT`);
+  }
+  if (!names.has('after_hours_target')) {
+    db.exec(`ALTER TABLE ivr_menus ADD COLUMN after_hours_target TEXT`);
+  }
+}
+
 function migrateExtensions(db: Database.Database): void {
   const cols = db.prepare(`PRAGMA table_info(extensions)`).all() as Array<{ name: string }>;
   const names = new Set(cols.map((c) => c.name));
@@ -330,8 +395,8 @@ export function getDb(): Database.Database {
   } catch (e) {
     console.warn('[db] bootstrap admin failed', e);
   }
-  // 起動時に pjsip.d/transports.conf と extensions.conf を最新で書き出して reload signal を投げる。
-  // 失敗してもアプリ起動は続行 (PJSIP の include に空ファイルがあれば Asterisk は問題なし)。
+  // 起動時に pjsip.d と dialplan.d を最新で書き出して reload signal を投げる。
+  // 失敗してもアプリ起動は続行 (include 先に空ファイルがあれば Asterisk は問題なし)。
   (async () => {
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -340,6 +405,14 @@ export function getDb(): Database.Database {
       console.log('[db] pjsip.d initialized on startup');
     } catch (e) {
       console.warn('[db] pjsip.d initial sync failed', e);
+    }
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { writeIvrDialplanAndReload } = require('./ivr') as typeof import('./ivr');
+      await writeIvrDialplanAndReload();
+      console.log('[db] ivr dialplan initialized on startup');
+    } catch (e) {
+      console.warn('[db] ivr dialplan initial sync failed', e);
     }
     try {
       // CDR を 10 秒ごとに ingest するループを起動時に開始 (/cdr を開かなくても動く)

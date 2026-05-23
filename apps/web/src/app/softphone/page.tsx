@@ -9,7 +9,7 @@ export default async function SoftphonePage() {
   await requireAccount();
   const webrtcExts = listExtensions().filter((e) => e.webrtc);
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[420px_1fr]">
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[420px_1fr]">
       <section className="space-y-4">
         <header>
           <h2 className="text-lg font-semibold">ブラウザソフトフォン (WebRTC)</h2>

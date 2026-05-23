@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Command Room PBX Click-to-call",
+  "name": "OpenPBX Click-to-call",
   "version": "0.1.0",
   "description": "ページ上の電話番号と tel: リンクをワンクリックで内線から発信する。",
   "permissions": ["activeTab", "storage", "contextMenus"],

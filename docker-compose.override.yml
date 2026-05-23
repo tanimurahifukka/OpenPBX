@@ -1,0 +1,13 @@
+# dev のみ (git ignore 想定): EVENT_PUSH を有効化 + outbox-v1 を host mount
+services:
+  web:
+    environment:
+      OPENPBX_INSTANCE_ID: "clinic-main"
+      OPENPBX_WORKSPACE_KEY: "tamura-hifuka"
+      EVENT_PUSH_URL: "http://host.docker.internal:3001/api/v1/external-events"
+      EVENT_PUSH_TOKEN: "Y1Dsh1m2Jp0m5pxMAh35fHYmc9jz_9rGCVNBAY6LQqc"
+      EVENT_PUSH_WORKSPACE_ID: "6a410836-57fc-4bb5-8545-f13f3bc7d1d5"
+      EVENT_PUSH_SOURCE_ACCOUNT_ID: "acct-pbx-clinic-main"
+      EVENT_COMPUTE_RECORDING_METRICS: "0"
+    volumes:
+      - ./data/outbox-v1:/app/data/outbox-v1

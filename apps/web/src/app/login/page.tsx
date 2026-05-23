@@ -17,7 +17,7 @@ export default async function LoginPage({
     <div className="mx-auto max-w-sm space-y-4 py-12">
       <header>
         <h2 className="text-lg font-semibold">ログイン</h2>
-        <p className="text-xs text-slate-500">Command Room PBX 管理画面</p>
+        <p className="text-xs text-slate-500">OpenPBX 管理画面</p>
       </header>
       <form action={loginAction} className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
         <input type="hidden" name="next" value={sp.next ?? '/'} />
