@@ -5,6 +5,7 @@ export interface PhonebookEntry {
   id: number;
   name: string;
   number: string;
+  org: string | null;
   category: string | null;
   note: string | null;
   updatedAt: string;
@@ -18,6 +19,7 @@ interface Row {
   id: number;
   name: string;
   number: string;
+  org: string | null;
   category: string | null;
   note: string | null;
   updated_at: string;
@@ -28,6 +30,7 @@ function rowTo(r: Row): PhonebookEntry {
     id: r.id,
     name: r.name,
     number: r.number,
+    org: r.org,
     category: r.category,
     note: r.note,
     updatedAt: r.updated_at,
@@ -43,9 +46,9 @@ export function listPhonebook(
     return (
       db
         .prepare(
-          'SELECT * FROM phonebook WHERE name LIKE ? OR number LIKE ? OR category LIKE ? ORDER BY name LIMIT 500',
+          'SELECT * FROM phonebook WHERE name LIKE ? OR number LIKE ? OR org LIKE ? OR category LIKE ? ORDER BY name LIMIT 500',
         )
-        .all(q, q, q) as Row[]
+        .all(q, q, q, q) as Row[]
     ).map(rowTo);
   }
   return (db.prepare('SELECT * FROM phonebook ORDER BY name LIMIT 500').all() as Row[]).map(rowTo);
@@ -60,6 +63,7 @@ export interface UpsertPhonebookInput {
   id?: number;
   name: string;
   number: string;
+  org?: string;
   category?: string;
   note?: string;
 }
@@ -77,10 +81,10 @@ export function createPhonebook(input: UpsertPhonebookInput, db: Database.Databa
   const num = input.number.replace(/[\s()]/g, '');
   const info = db
     .prepare(
-      `INSERT INTO phonebook (name, number, category, note, updated_at)
-       VALUES (?, ?, ?, ?, datetime('now'))`,
+      `INSERT INTO phonebook (name, number, org, category, note, updated_at)
+       VALUES (?, ?, ?, ?, ?, datetime('now'))`,
     )
-    .run(input.name.trim(), num, input.category ?? null, input.note ?? null);
+    .run(input.name.trim(), num, input.org?.trim() || null, input.category?.trim() || null, input.note ?? null);
   return rowTo(db.prepare('SELECT * FROM phonebook WHERE id = ?').get(Number(info.lastInsertRowid)) as Row);
 }
 
@@ -91,10 +95,17 @@ export function updatePhonebook(input: UpsertPhonebookInput, db: Database.Databa
   const r = db
     .prepare(
       `UPDATE phonebook
-          SET name = ?, number = ?, category = ?, note = ?, updated_at = datetime('now')
+          SET name = ?, number = ?, org = ?, category = ?, note = ?, updated_at = datetime('now')
         WHERE id = ?`,
     )
-    .run(input.name.trim(), num, input.category ?? null, input.note ?? null, input.id);
+    .run(
+      input.name.trim(),
+      num,
+      input.org?.trim() || null,
+      input.category?.trim() || null,
+      input.note ?? null,
+      input.id,
+    );
   if (r.changes === 0) return null;
   return rowTo(db.prepare('SELECT * FROM phonebook WHERE id = ?').get(input.id) as Row);
 }

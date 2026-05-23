@@ -78,12 +78,14 @@ CREATE TABLE IF NOT EXISTS phonebook (
   id           INTEGER PRIMARY KEY AUTOINCREMENT,
   name         TEXT NOT NULL,
   number       TEXT NOT NULL,
-  category     TEXT,
+  org          TEXT,           -- 組織名 / 会社名 (多業種向け: 取引先・顧客の会社名など)
+  category     TEXT,           -- 任意ラベル (顧客 / 取引先 / スタッフ など)
   note         TEXT,
   updated_at   TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_phonebook_number ON phonebook(number);
 CREATE INDEX IF NOT EXISTS idx_phonebook_name   ON phonebook(name);
+CREATE INDEX IF NOT EXISTS idx_phonebook_org    ON phonebook(org);
 
 CREATE TABLE IF NOT EXISTS holidays (
   date       TEXT PRIMARY KEY,   -- YYYY-MM-DD
@@ -216,32 +218,9 @@ CREATE TABLE IF NOT EXISTS network_settings (
 );
 INSERT OR IGNORE INTO network_settings (id) VALUES (1);
 
-CREATE TABLE IF NOT EXISTS patients (
-  id           TEXT PRIMARY KEY,
-  name         TEXT,
-  kana         TEXT,
-  birth_date   TEXT,
-  phone        TEXT,
-  note         TEXT,
-  updated_at   TEXT NOT NULL DEFAULT (datetime('now')),
-  created_at   TEXT NOT NULL DEFAULT (datetime('now')),
-  CHECK (length(id) = 5 AND id GLOB '[0-9][0-9][0-9][0-9][0-9]')
-);
-CREATE INDEX IF NOT EXISTS idx_patients_kana ON patients(kana);
-CREATE INDEX IF NOT EXISTS idx_patients_name ON patients(name);
-
-CREATE TABLE IF NOT EXISTS patient_records (
-  id            INTEGER PRIMARY KEY AUTOINCREMENT,
-  patient_id    TEXT NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
-  extension     TEXT,
-  recorded_at   TEXT NOT NULL DEFAULT (datetime('now')),
-  kind          TEXT NOT NULL DEFAULT 'note',
-  summary       TEXT,
-  note          TEXT,
-  recommendations_json TEXT
-);
-CREATE INDEX IF NOT EXISTS idx_patient_records_pid ON patient_records(patient_id, recorded_at DESC);
-CREATE INDEX IF NOT EXISTS idx_patient_records_date ON patient_records(recorded_at DESC);
+-- patients / patient_records は廃止 (多業種化のため /phonebook に統合)。
+-- 既存 DB には残っている場合があるが新スキーマには定義しない。
+-- DROP は db migration として init() 内で別途実行する (db 既存テーブルがあるとき)。
 
 CREATE TABLE IF NOT EXISTS version_upgrades (
   id           INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -292,7 +271,31 @@ export function applySchema(db: Database.Database): void {
   db.pragma('foreign_keys = ON');
   db.exec(SCHEMA);
   migrateExtensions(db);
+  migratePhonebook(db);
+  dropPatientTables(db);
   db.exec(SEED_EXTENSIONS);
+}
+
+// 既存 phonebook に org 列を後付け追加する冪等マイグレーション。
+function migratePhonebook(db: Database.Database): void {
+  const cols = db.prepare(`PRAGMA table_info(phonebook)`).all() as Array<{ name: string }>;
+  const names = new Set(cols.map((c) => c.name));
+  if (!names.has('org')) {
+    db.exec(`ALTER TABLE phonebook ADD COLUMN org TEXT`);
+  }
+}
+
+// patients / patient_records は廃止。古い DB に残っている場合は削除する。
+// foreign_keys = ON なので順序は重要 (FK 側の patient_records から)。
+function dropPatientTables(db: Database.Database): void {
+  db.exec(`
+    DROP INDEX IF EXISTS idx_patient_records_date;
+    DROP INDEX IF EXISTS idx_patient_records_pid;
+    DROP TABLE IF EXISTS patient_records;
+    DROP INDEX IF EXISTS idx_patients_name;
+    DROP INDEX IF EXISTS idx_patients_kana;
+    DROP TABLE IF EXISTS patients;
+  `);
 }
 
 // 既存DBに対する冪等マイグレーション。

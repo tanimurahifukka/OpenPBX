@@ -38,9 +38,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <a className="rounded px-2 py-1 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500" href="/softphone">
                 ソフトフォン
               </a>
-              <a className="rounded px-2 py-1 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500" href="/patients">
-                患者
-              </a>
               <a className="rounded px-2 py-1 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500" href="/extensions">
                 端末管理
               </a>
