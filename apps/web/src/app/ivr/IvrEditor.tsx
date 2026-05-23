@@ -32,10 +32,19 @@ import {
 import { ConfirmButton } from '@/components/ConfirmButton';
 import { IvrCanvas } from './IvrCanvas';
 
+export interface GuidanceChoice {
+  /** Asterisk が参照する name (例: "custom/ivr-welcome")。これが prompt path として保存される。 */
+  path: string;
+  /** UI に出す表示名 (なければ path)。 */
+  label: string;
+}
+
 interface Props {
   initial?: IvrMenu;
   upsertAction: (formData: FormData) => Promise<void>;
   deleteAction?: (formData: FormData) => Promise<void>;
+  /** 既存ガイダンス一覧。空配列のときは select は出さず raw input にフォールバック。 */
+  guidances?: GuidanceChoice[];
 }
 
 interface OptionDraft extends IvrOption {
@@ -135,9 +144,9 @@ function withUid(o: IvrOption): OptionDraft {
 
 function defaultOptions(): OptionDraft[] {
   return [
-    { uid: newUid(), digit: '1', action: 'goto_extension', target: '9001', label: '予約' },
+    { uid: newUid(), digit: '1', action: 'goto_extension', target: '9001', label: '営業窓口' },
     { uid: newUid(), digit: '2', action: 'goto_extension', target: '9002', label: '折返し依頼' },
-    { uid: newUid(), digit: '0', action: 'goto_extension', target: '1001', label: 'スタッフ' },
+    { uid: newUid(), digit: '0', action: 'goto_extension', target: '1001', label: 'オペレーター' },
   ];
 }
 
@@ -145,7 +154,7 @@ function actionNeedsTarget(action: IvrAction | CallerIdRouteAction | AfterHoursA
   return action === 'goto_extension' || action === 'goto_ringgroup' || action === 'goto_ivr';
 }
 
-export function IvrEditor({ initial, upsertAction, deleteAction }: Props) {
+export function IvrEditor({ initial, upsertAction, deleteAction, guidances = [] }: Props) {
   const formId = useId();
   const isEdit = !!initial;
   const [options, setOptions] = useState<OptionDraft[]>(
@@ -435,22 +444,34 @@ export function IvrEditor({ initial, upsertAction, deleteAction }: Props) {
             </div>
           </section>
 
+          <ScriptPreview
+            options={options}
+            afterHoursAction={afterHoursAction}
+            afterHoursTarget={afterHoursTarget}
+            cidRouteCount={cidRoutes.length}
+          />
+
           <details className="rounded-lg border border-slate-200 bg-white p-4" open={!isEdit}>
             <summary className="cursor-pointer text-xs font-bold text-slate-950">
               音声ガイダンス
             </summary>
             <div className="mt-3 space-y-3">
               {(['welcomePrompt', 'menuPrompt', 'invalidPrompt', 'goodbyePrompt'] as const).map((k) => (
-                <label key={k} className={labelClass}>
-                  {promptLabel(k)}
-                  <input
-                    name={k}
-                    defaultValue={(initial?.[k] ?? '') as string}
-                    placeholder="custom/ivr-menu"
-                    className={`${fieldClass} font-mono`}
-                  />
-                </label>
+                <GuidanceField
+                  key={k}
+                  fieldName={k}
+                  label={promptLabel(k)}
+                  defaultValue={(initial?.[k] ?? '') as string}
+                  guidances={guidances}
+                  inputClass={`${fieldClass} font-mono`}
+                  labelClass={labelClass}
+                />
               ))}
+              {guidances.length === 0 && (
+                <p className="text-[11px] text-slate-500">
+                  /guidances に wav を登録するとここに選択肢として出ます。
+                </p>
+              )}
             </div>
           </details>
         </aside>
@@ -472,12 +493,139 @@ function promptLabel(key: 'welcomePrompt' | 'menuPrompt' | 'invalidPrompt' | 'go
   return labels[key];
 }
 
+interface GuidanceFieldProps {
+  fieldName: string;
+  label: string;
+  defaultValue: string;
+  guidances: GuidanceChoice[];
+  inputClass: string;
+  labelClass: string;
+}
+
+// ガイダンスが登録されていれば select、未登録ならテキスト入力にフォールバック。
+// select でも既存値が一覧に無い場合 ("手入力モード" 切替) は raw input を表示。
+function GuidanceField({
+  fieldName,
+  label,
+  defaultValue,
+  guidances,
+  inputClass,
+  labelClass,
+}: GuidanceFieldProps) {
+  const known = guidances.some((g) => g.path === defaultValue);
+  const [value, setValue] = useState<string>(defaultValue);
+  const [manual, setManual] = useState<boolean>(!!defaultValue && !known);
+
+  if (guidances.length === 0 || manual) {
+    return (
+      <label className={labelClass}>
+        {label}
+        <div className="mt-1 flex items-center gap-2">
+          <input
+            name={fieldName}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder="例: custom/ivr-menu"
+            className={inputClass}
+          />
+          {guidances.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setManual(false)}
+              className="shrink-0 text-[10px] font-semibold text-emerald-700 hover:underline"
+            >
+              一覧から選ぶ
+            </button>
+          )}
+        </div>
+      </label>
+    );
+  }
+
+  return (
+    <label className={labelClass}>
+      {label}
+      <div className="mt-1 flex items-center gap-2">
+        <select
+          name={fieldName}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          className={inputClass}
+        >
+          <option value="">(再生しない)</option>
+          {guidances.map((g) => (
+            <option key={g.path} value={g.path}>
+              {g.label}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          onClick={() => setManual(true)}
+          className="shrink-0 text-[10px] font-semibold text-slate-500 hover:underline"
+        >
+          手入力
+        </button>
+      </div>
+    </label>
+  );
+}
+
 function SummaryMetric({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
       <dt className="text-[10px] font-semibold text-slate-500">{label}</dt>
       <dd className="mt-1 font-mono text-lg font-bold text-slate-950">{value}</dd>
     </div>
+  );
+}
+
+interface ScriptPreviewProps {
+  options: OptionDraft[];
+  afterHoursAction: '' | AfterHoursAction;
+  afterHoursTarget: string;
+  cidRouteCount: number;
+}
+
+// 保存前に「電話をかけた相手がどう案内されるか」を読み上げ調で確認するためのプレビュー。
+// 実際の Asterisk dialplan reload を待たずにブラウザ側で見える。
+function ScriptPreview({ options, afterHoursAction, afterHoursTarget, cidRouteCount }: ScriptPreviewProps) {
+  const lines = options
+    .filter((o) => o.digit?.trim())
+    .map((o) => {
+      const action = ACTION_META[o.action]?.shortLabel ?? o.action;
+      const target = o.target?.trim() ? ` → ${o.target}` : '';
+      const label = o.label?.trim() ? `（${o.label}）` : '';
+      return `${o.digit} を押すと: ${action}${target}${label}`;
+    });
+
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white p-4">
+      <p className="text-xs font-bold text-slate-950">読み上げ台本プレビュー</p>
+      <p className="mt-1 text-[11px] text-slate-500">保存前に分岐の流れを確認できます。</p>
+      <ol className="mt-3 space-y-1 text-xs text-slate-700">
+        <li>📢 開始案内が流れます</li>
+        {lines.length === 0 ? (
+          <li className="text-slate-400">（分岐がまだありません）</li>
+        ) : (
+          lines.map((l, i) => <li key={i}>📞 {l}</li>)
+        )}
+        <li>⌛ 無入力時はもう一度案内します</li>
+        <li>❌ リトライ超過で終了案内 → 切断</li>
+        {afterHoursAction && (
+          <li className="rounded bg-amber-50 px-2 py-1 text-amber-800">
+            🌙 営業時間外:{' '}
+            {ACTION_META[afterHoursAction as IvrAction]?.shortLabel ?? afterHoursAction}
+            {afterHoursTarget ? ` → ${afterHoursTarget}` : ''}
+          </li>
+        )}
+        {cidRouteCount > 0 && (
+          <li className="rounded bg-sky-50 px-2 py-1 text-sky-800">
+            🆔 CallerID ルートが {cidRouteCount} 件設定されています（メニュー前に分岐）
+          </li>
+        )}
+      </ol>
+    </section>
   );
 }
 
