@@ -37,3 +37,6 @@ docker-compose.override.yml.bak
 
 # transient event outbox JSON (生成物。古い WIP commit 由来)
 data/outbox-v1/
+
+# accidentally committed sqlite files (do not commit)
+apps/web/data/db/

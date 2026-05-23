@@ -76,7 +76,7 @@ export default async function OverviewPage() {
           <dt className="text-slate-500">RTP media</dt>
           <dd className="font-mono">10000-10020/udp</dd>
           <dt className="text-slate-500">特番</dt>
-          <dd className="font-mono">9000 (IVR) / 9001 (当日予約) / 9002 (折返し依頼)</dd>
+          <dd className="font-mono">9000 (IVR) / 9001 (営業窓口) / 9002 (折返し依頼)</dd>
           <dt className="text-slate-500">Inbox</dt>
           <dd className="font-mono">{INBOX_DIR}</dd>
           <dt className="text-slate-500">録音</dt>

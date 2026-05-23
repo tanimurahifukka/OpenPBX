@@ -279,7 +279,7 @@ CREATE INDEX IF NOT EXISTS idx_event_outbox_status ON event_outbox(status, creat
 const SEED_EXTENSIONS = `
 INSERT OR IGNORE INTO extensions (number, display_name, secret, note) VALUES
   ('1001', 'Reception 1001', 'secret-1001', '受付'),
-  ('1002', 'Doctor 1002',    'secret-1002', '診察室');
+  ('1002', 'Staff 1002',     'secret-1002', 'バックオフィス');
 `;
 
 export function applySchema(db: Database.Database): void {
@@ -322,9 +322,9 @@ function seedDefaultIvr(db: Database.Database): void {
       const insertOption = db.prepare(
         'INSERT INTO ivr_options (ivr_menu_id, digit, action, target, label) VALUES (?, ?, ?, ?, ?)',
       );
-      insertOption.run(menuId, '1', 'goto_extension', '9001', '当日予約');
+      insertOption.run(menuId, '1', 'goto_extension', '9001', '営業窓口');
       insertOption.run(menuId, '2', 'goto_extension', '9002', '折返し依頼');
-      insertOption.run(menuId, '0', 'goto_extension', '1001', 'スタッフ');
+      insertOption.run(menuId, '0', 'goto_extension', '1001', 'オペレーター');
     });
     seed();
   }
