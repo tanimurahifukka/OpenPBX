@@ -268,6 +268,17 @@ CREATE TABLE IF NOT EXISTS sip_trunks (
   note            TEXT,
   updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS event_outbox (
+  event_id      TEXT PRIMARY KEY,             -- openpbx:<pbxInstanceId>:<uniqueId>
+  status        TEXT NOT NULL DEFAULT 'pending',  -- pending | sent | dead
+  payload_json  TEXT NOT NULL,                -- command-room-pbx/event/v1 本文
+  attempts      INTEGER NOT NULL DEFAULT 0,
+  last_error    TEXT,
+  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  sent_at       TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_event_outbox_status ON event_outbox(status, created_at);
 `;
 
 const SEED_EXTENSIONS = `
@@ -338,6 +349,24 @@ export function getDb(): Database.Database {
       console.log('[db] CDR ingest loop started');
     } catch (e) {
       console.warn('[db] CDR ingest loop start failed', e);
+    }
+    try {
+      // command-room-pbx/event/v1 への upgrade ループ。data/inbox/*.meta.json を tail し
+      // data/outbox-v1/<eventId>.json + event_outbox テーブルに記録する。
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { startEventV1Loop } = require('./events/v1/watcher') as typeof import('./events/v1/watcher');
+      startEventV1Loop();
+      console.log('[db] event-v1 upgrade loop started');
+    } catch (e) {
+      console.warn('[db] event-v1 upgrade loop start failed', e);
+    }
+    try {
+      // command-room への HTTP push（env が揃っているときだけ起動）。
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { startEventV1PushLoop } = require('./events/v1/emit') as typeof import('./events/v1/emit');
+      startEventV1PushLoop();
+    } catch (e) {
+      console.warn('[db] event-v1 push loop start failed', e);
     }
   })();
   return db;
