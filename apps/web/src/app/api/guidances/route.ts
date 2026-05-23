@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
 import { saveGuidanceWav, InvalidGuidanceError } from '@/lib/guidances';
+import { requireApi } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
+  const auth = await requireApi(['admin']);
+  if (auth instanceof Response) return auth;
   const form = await req.formData().catch(() => null);
   if (!form) return NextResponse.json({ error: 'expect multipart/form-data' }, { status: 400 });
   const name = String(form.get('name') ?? '');

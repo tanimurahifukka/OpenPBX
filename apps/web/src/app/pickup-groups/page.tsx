@@ -6,11 +6,13 @@ import {
   deletePickupGroupAction,
 } from '@/app/actions';
 import { ConfirmButton } from '@/components/ConfirmButton';
+import { requireAccount } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export default function PickupGroupsPage() {
+export default async function PickupGroupsPage() {
+  await requireAccount();
   const groups = listPickupGroups();
   const exts = listExtensions().map((e) => e.number);
   return (

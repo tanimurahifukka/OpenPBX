@@ -12,15 +12,36 @@
   });
 
   // 平文の電話番号にアイコンを付ける軽量パターン (高負荷を避けるため発火制限)
+  // RE は g flag のためインスタンスを使い回すと lastIndex がずれて取りこぼす。
+  // matchAll で都度走査する。
   const RE = /(\b0\d[\d-]{7,}|\b\+\d{8,})/g;
   function decorate(node) {
     if (!(node instanceof Text)) return;
-    if (!node.nodeValue || !RE.test(node.nodeValue)) return;
+    const text = node.nodeValue;
+    if (!text) return;
+    const matches = [...text.matchAll(RE)];
+    if (matches.length === 0) return;
+    // innerHTML を使わず、TextNode と createElement で span を組み立てる。
+    // これにより、たまたま電話番号と並んだ HTML 風文字列が解釈される事故を防ぐ。
     const span = document.createElement('span');
-    span.innerHTML = node.nodeValue.replace(RE, (m) => {
-      const num = m.replace(/[^0-9+]/g, '');
-      return `<a href="tel:${num}" data-cr-click="1" style="text-decoration:underline dotted">${m}</a>`;
-    });
+    let cursor = 0;
+    for (const m of matches) {
+      const start = m.index ?? 0;
+      const end = start + m[0].length;
+      if (start > cursor) {
+        span.appendChild(document.createTextNode(text.slice(cursor, start)));
+      }
+      const a = document.createElement('a');
+      a.setAttribute('href', `tel:${m[0].replace(/[^0-9+]/g, '')}`);
+      a.setAttribute('data-cr-click', '1');
+      a.style.textDecoration = 'underline dotted';
+      a.appendChild(document.createTextNode(m[0]));
+      span.appendChild(a);
+      cursor = end;
+    }
+    if (cursor < text.length) {
+      span.appendChild(document.createTextNode(text.slice(cursor)));
+    }
     node.parentNode?.replaceChild(span, node);
   }
   const tw = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);

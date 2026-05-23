@@ -6,11 +6,14 @@ import {
   writePjsipConfigAndReload,
   InvalidExtensionError,
 } from '@/lib/extensions';
+import { requireApi } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET(_req: Request, { params }: { params: Promise<{ number: string }> }) {
+  const auth = await requireApi();
+  if (auth instanceof Response) return auth;
   const { number } = await params;
   const ext = getExtension(number);
   if (!ext) return NextResponse.json({ error: 'not found' }, { status: 404 });
@@ -18,6 +21,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ number:
 }
 
 export async function PUT(req: Request, { params }: { params: Promise<{ number: string }> }) {
+  const auth = await requireApi(['admin']);
+  if (auth instanceof Response) return auth;
   const { number } = await params;
   let body: unknown;
   try {
@@ -45,6 +50,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ number: 
 }
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ number: string }> }) {
+  const auth = await requireApi(['admin']);
+  if (auth instanceof Response) return auth;
   const { number } = await params;
   try {
     const removed = deleteExtension(number);

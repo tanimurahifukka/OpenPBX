@@ -12,6 +12,7 @@ import {
   deleteTimeRuleAction,
 } from '@/app/actions';
 import { ConfirmButton } from '@/components/ConfirmButton';
+import { requireAccount } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -32,7 +33,8 @@ const PRESETS: Array<{ label: string; days: string[] }> = [
   { label: '毎日', days: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] },
 ];
 
-export default function BusinessHoursPage() {
+export default async function BusinessHoursPage() {
+  await requireAccount();
   const holidays = listHolidays();
   const rules = listTimeRules();
   return (

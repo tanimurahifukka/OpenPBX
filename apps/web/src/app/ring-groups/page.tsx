@@ -6,11 +6,13 @@ import {
   deleteRingGroupAction,
 } from '@/app/actions';
 import { ConfirmButton } from '@/components/ConfirmButton';
+import { requireAccount } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export default function RingGroupsPage() {
+export default async function RingGroupsPage() {
+  await requireAccount();
   const groups = listRingGroups();
   const extensions = listExtensions();
   const extOptions = extensions.map((e) => e.number);

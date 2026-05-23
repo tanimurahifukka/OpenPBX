@@ -22,6 +22,7 @@ import {
   getAccountTotpSecret,
   countAdmins,
   getAccountById,
+  isAccountLockedOut,
   type Role,
 } from '@/lib/auth';
 import { isIpAllowed } from '@/lib/policy';
@@ -120,6 +121,7 @@ async function flash(
 // ---- extensions ----
 export async function createExtensionAction(formData: FormData): Promise<void> {
   await flash('/extensions', '内線を追加しました', async () => {
+    const me = await requireRole('admin');
     createExtension({
       number: s(formData.get('number')),
       displayName: s(formData.get('displayName')) || undefined,
@@ -128,11 +130,13 @@ export async function createExtensionAction(formData: FormData): Promise<void> {
       webrtc: formData.get('webrtc') === 'on',
     });
     await writePjsipConfigAndReload();
+    recordAudit({ actor: me.username, action: 'extension.create', target: s(formData.get('number')) });
   });
 }
 
 export async function updateExtensionAction(formData: FormData): Promise<void> {
   await flash('/extensions', '内線を更新しました', async () => {
+    const me = await requireRole('admin');
     updateExtension({
       number: s(formData.get('number')),
       displayName: s(formData.get('displayName')) || undefined,
@@ -141,15 +145,18 @@ export async function updateExtensionAction(formData: FormData): Promise<void> {
       webrtc: formData.get('webrtc') === 'on',
     });
     await writePjsipConfigAndReload();
+    recordAudit({ actor: me.username, action: 'extension.update', target: s(formData.get('number')) });
   });
 }
 
 export async function deleteExtensionAction(formData: FormData): Promise<void> {
   await flash('/extensions', '内線を削除しました', async () => {
+    const me = await requireRole('admin');
     const number = s(formData.get('number'));
     if (!number) throw new Error('番号が指定されていません');
     deleteExtension(number);
     await writePjsipConfigAndReload();
+    recordAudit({ actor: me.username, action: 'extension.delete', target: number });
   });
 }
 
@@ -164,6 +171,7 @@ function asStrategy(v: FormDataEntryValue | null): RingStrategy {
 
 export async function createRingGroupAction(formData: FormData): Promise<void> {
   await flash('/ring-groups', '着信グループを追加しました', async () => {
+    await requireRole('admin');
     createRingGroup({
       number: s(formData.get('number')),
       name: s(formData.get('name')) || undefined,
@@ -178,6 +186,7 @@ export async function createRingGroupAction(formData: FormData): Promise<void> {
 
 export async function updateRingGroupAction(formData: FormData): Promise<void> {
   await flash('/ring-groups', '着信グループを更新しました', async () => {
+    await requireRole('admin');
     updateRingGroup({
       number: s(formData.get('number')),
       name: s(formData.get('name')) || undefined,
@@ -192,6 +201,7 @@ export async function updateRingGroupAction(formData: FormData): Promise<void> {
 
 export async function deleteRingGroupAction(formData: FormData): Promise<void> {
   await flash('/ring-groups', '着信グループを削除しました', async () => {
+    await requireRole('admin');
     const number = s(formData.get('number'));
     if (!number) throw new Error('番号が指定されていません');
     deleteRingGroup(number);
@@ -202,6 +212,7 @@ export async function deleteRingGroupAction(formData: FormData): Promise<void> {
 // ---- pickup groups ----
 export async function createPickupGroupAction(formData: FormData): Promise<void> {
   await flash('/pickup-groups', 'ピックアップグループを追加しました', async () => {
+    await requireRole('admin');
     createPickupGroup({
       name: s(formData.get('name')),
       members: parseMembers(formData.get('members')),
@@ -213,6 +224,7 @@ export async function createPickupGroupAction(formData: FormData): Promise<void>
 
 export async function updatePickupGroupAction(formData: FormData): Promise<void> {
   await flash('/pickup-groups', 'ピックアップグループを更新しました', async () => {
+    await requireRole('admin');
     updatePickupGroup({
       name: s(formData.get('name')),
       members: parseMembers(formData.get('members')),
@@ -224,6 +236,7 @@ export async function updatePickupGroupAction(formData: FormData): Promise<void>
 
 export async function deletePickupGroupAction(formData: FormData): Promise<void> {
   await flash('/pickup-groups', 'ピックアップグループを削除しました', async () => {
+    await requireRole('admin');
     const name = s(formData.get('name'));
     if (!name) throw new Error('名前が指定されていません');
     deletePickupGroup(name);
@@ -234,7 +247,8 @@ export async function deletePickupGroupAction(formData: FormData): Promise<void>
 
 // ---- phonebook ----
 export async function createPhonebookAction(formData: FormData): Promise<void> {
-  await flash('/phonebook', '電話帳に追加しました', () => {
+  await flash('/phonebook', '電話帳に追加しました', async () => {
+    await requireAccount();
     createPhonebook({
       name: s(formData.get('name')),
       number: s(formData.get('number')),
@@ -245,7 +259,8 @@ export async function createPhonebookAction(formData: FormData): Promise<void> {
 }
 
 export async function updatePhonebookAction(formData: FormData): Promise<void> {
-  await flash('/phonebook', '電話帳を更新しました', () => {
+  await flash('/phonebook', '電話帳を更新しました', async () => {
+    await requireAccount();
     const id = Number(formData.get('id'));
     if (!Number.isInteger(id) || id <= 0) throw new Error('id が不正');
     updatePhonebook({
@@ -259,7 +274,8 @@ export async function updatePhonebookAction(formData: FormData): Promise<void> {
 }
 
 export async function deletePhonebookAction(formData: FormData): Promise<void> {
-  await flash('/phonebook', '電話帳から削除しました', () => {
+  await flash('/phonebook', '電話帳から削除しました', async () => {
+    await requireRole('admin', 'supervisor');
     const id = Number(formData.get('id'));
     if (!Number.isInteger(id) || id <= 0) throw new Error('id が不正');
     deletePhonebook(id);
@@ -269,6 +285,7 @@ export async function deletePhonebookAction(formData: FormData): Promise<void> {
 // ---- holidays / time rules ----
 export async function upsertHolidayAction(formData: FormData): Promise<void> {
   await flash('/business-hours', '祝日を保存しました', async () => {
+    await requireRole('admin', 'supervisor');
     upsertHoliday(s(formData.get('date')), s(formData.get('name')));
     await writeBusinessHoursAndReload();
   });
@@ -276,6 +293,7 @@ export async function upsertHolidayAction(formData: FormData): Promise<void> {
 
 export async function deleteHolidayAction(formData: FormData): Promise<void> {
   await flash('/business-hours', '祝日を削除しました', async () => {
+    await requireRole('admin', 'supervisor');
     const date = s(formData.get('date'));
     if (!date) throw new Error('日付が指定されていません');
     deleteHoliday(date);
@@ -292,6 +310,7 @@ function readDays(formData: FormData): string {
 
 export async function createTimeRuleAction(formData: FormData): Promise<void> {
   await flash('/business-hours', '時間帯ルールを追加しました', async () => {
+    await requireRole('admin', 'supervisor');
     createTimeRule({
       name: s(formData.get('name')),
       days: readDays(formData),
@@ -305,6 +324,7 @@ export async function createTimeRuleAction(formData: FormData): Promise<void> {
 
 export async function updateTimeRuleAction(formData: FormData): Promise<void> {
   await flash('/business-hours', '時間帯ルールを更新しました', async () => {
+    await requireRole('admin', 'supervisor');
     const id = Number(formData.get('id'));
     if (!Number.isInteger(id) || id <= 0) throw new Error('id が不正');
     updateTimeRule({
@@ -321,6 +341,7 @@ export async function updateTimeRuleAction(formData: FormData): Promise<void> {
 
 export async function deleteTimeRuleAction(formData: FormData): Promise<void> {
   await flash('/business-hours', '時間帯ルールを削除しました', async () => {
+    await requireRole('admin', 'supervisor');
     const id = Number(formData.get('id'));
     if (!Number.isInteger(id) || id <= 0) throw new Error('id が不正');
     deleteTimeRule(id);
@@ -348,6 +369,7 @@ function parseIvrOptions(raw: string): IvrOption[] {
 
 export async function upsertIvrAction(formData: FormData): Promise<void> {
   await flash('/ivr', 'IVR を保存しました', async () => {
+    await requireRole('admin');
     const number = s(formData.get('number'));
     const input = {
       number,
@@ -371,6 +393,7 @@ export async function upsertIvrAction(formData: FormData): Promise<void> {
 
 export async function deleteIvrAction(formData: FormData): Promise<void> {
   await flash('/ivr', 'IVR を削除しました', async () => {
+    await requireRole('admin');
     const number = s(formData.get('number'));
     if (!number) throw new Error('番号が指定されていません');
     deleteIvrMenu(number);
@@ -381,6 +404,7 @@ export async function deleteIvrAction(formData: FormData): Promise<void> {
 // ---- guidances ----
 export async function deleteGuidanceAction(formData: FormData): Promise<void> {
   await flash('/guidances', 'ガイダンスを削除しました', async () => {
+    await requireRole('admin');
     const name = s(formData.get('name'));
     if (!name) throw new Error('name が指定されていません');
     await deleteGuidance(name);
@@ -389,11 +413,19 @@ export async function deleteGuidanceAction(formData: FormData): Promise<void> {
 }
 
 // ---- auth (login / logout は次の URL に redirect するので flash を使わない) ----
+// next redirect param は同一オリジン内のローカルパス (/ で始まる) のみ許可。
+// `//evil.com/...`, `http://...`, スキーマ付きを弾く。
+function sanitizeNext(raw: string): string {
+  if (!raw || !raw.startsWith('/')) return '/';
+  if (raw.startsWith('//') || raw.startsWith('/\\')) return '/';
+  return raw;
+}
+
 export async function loginAction(formData: FormData): Promise<void> {
   const username = s(formData.get('username'));
   const password = String(formData.get('password') ?? '');
   const totp = String(formData.get('totp') ?? '').trim();
-  const next = s(formData.get('next')) || '/';
+  const next = sanitizeNext(s(formData.get('next')));
   const meta = await requestMeta();
   let ok = false;
   let why: string | undefined;
@@ -402,6 +434,13 @@ export async function loginAction(formData: FormData): Promise<void> {
       why = 'この IP からのログインは許可されていません';
       recordLoginAttempt(username, false, meta);
       recordAudit({ actor: username, action: 'login.blocked.ip', ip: meta.ip });
+    } else if (username && isAccountLockedOut(username)) {
+      // 失敗回数が閾値を超えたアカウントは 15 分待たないとログインできない。
+      // username は valid/invalid どちらでもこの分岐に入りうるので、enumeration を避ける狙いで
+      // メッセージは一般的にする。
+      why = 'ログインが一時的に制限されています。しばらくしてからもう一度お試しください';
+      recordLoginAttempt(username, false, meta);
+      recordAudit({ actor: username, action: 'login.locked', ip: meta.ip });
     } else {
       const a = getAccountByUsername(username);
       const hash = a ? getAccountPasswordHash(a.id) : null;
@@ -476,7 +515,7 @@ export async function updateMyPasswordAction(formData: FormData): Promise<void> 
   await flash('/me', 'パスワードを変更しました', async () => {
     const me = await requireAccount();
     const pw = String(formData.get('password') ?? '');
-    if (!pw || pw.length < 8) throw new Error('パスワードは 8 文字以上');
+    // policy 適用は updateAccountPassword 内で行う。
     updateAccountPassword(me.id, pw);
     recordAudit({ actor: me.username, action: 'self.password' });
   });
@@ -531,7 +570,7 @@ export async function updateAccountPasswordAction(formData: FormData): Promise<v
     const id = Number(formData.get('id'));
     const pw = String(formData.get('password') ?? '');
     if (!Number.isInteger(id) || id <= 0) throw new Error('id が不正');
-    if (!pw || pw.length < 8) throw new Error('パスワードは 8 文字以上');
+    // policy 適用は updateAccountPassword 内で行う。
     updateAccountPassword(id, pw);
     recordAudit({ actor: me.username, action: 'account.password', target: String(id) });
   });

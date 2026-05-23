@@ -1,9 +1,12 @@
 import { amiClient, listDevices } from '@/lib/ami';
+import { requireApi } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  const auth = await requireApi();
+  if (auth instanceof Response) return auth;
   const client = amiClient();
   const encoder = new TextEncoder();
 

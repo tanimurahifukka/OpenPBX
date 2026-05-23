@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // 未認証なら /login へリダイレクト。
-// cookie の存在チェックだけで、有効性は Server Action / Page 内で再検証する。
+// このチェックは UX のための早期リダイレクトに過ぎず、cookie の存在しか見ない。
+// 認証/認可の本体は各 Page (await requireAccount()) / API route (await requireApi())
+// / Server Action (await requireRole(...)) で必ず行うこと。
 const PUBLIC_PATHS = ['/login', '/api/login', '/api/logout', '/api/health'];
 
 export function middleware(req: NextRequest) {

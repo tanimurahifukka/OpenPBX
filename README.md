@@ -59,7 +59,7 @@ notify-event.sh → /inbox/<basename>.{wav,meta.json}
 ## 起動 (Mac + Docker Desktop)
 
 ```bash
-git clone https://github.com/tanimurahifukka/OpenPBX.git
+git clone https://github.com/tanimurahifukka/command-room-stack-OpenPBX.git
 cd OpenPBX
 docker compose build
 docker compose up -d

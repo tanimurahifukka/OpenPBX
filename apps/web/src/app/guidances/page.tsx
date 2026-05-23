@@ -1,11 +1,13 @@
 import { listGuidances } from '@/lib/guidances';
 import { deleteGuidanceAction } from '@/app/actions';
 import { ConfirmButton } from '@/components/ConfirmButton';
+import { requireAccount } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export default function GuidancesPage() {
+export default async function GuidancesPage() {
+  await requireAccount();
   const items = listGuidances();
   return (
     <div className="space-y-6">

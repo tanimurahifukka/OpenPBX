@@ -1,5 +1,6 @@
 import { listCdr, startCdrIngestLoop } from '@/lib/cdr';
 import { formatJst, toIsoUtc } from '@/lib/datetime';
+import { requireAccount } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -13,6 +14,7 @@ interface SearchParams {
 }
 
 export default async function CdrPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  await requireAccount();
   startCdrIngestLoop();
   const sp = await searchParams;
   const rows = listCdr({
