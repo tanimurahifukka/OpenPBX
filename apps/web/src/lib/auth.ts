@@ -277,8 +277,13 @@ export async function createSession(accountId: number, meta?: { ip?: string; use
     sameSite: 'lax',
     path: '/',
     expires: new Date(expires),
-    // COOKIE_SECURE=1 (HTTPS 経由 / production) ならtrue。LAN MVP 用 HTTP では false。
-    secure: process.env.COOKIE_SECURE === '1' || process.env.NODE_ENV === 'production',
+    // secure cookie は HTTPS 配信の前段があるときだけ ON にする。
+    // Docker compose + http://localhost:3000 で運用するケース (LAN MVP) で、
+    // NODE_ENV=production でも secure=true にすると HTTP には cookie が保存
+    // されず実質ロックアウトになる。
+    // よって COOKIE_SECURE=1 を operator が明示したときだけ secure=true。
+    // production の HTTPS リバプロを置く運用では .env で COOKIE_SECURE=1 を立てる。
+    secure: process.env.COOKIE_SECURE === '1',
   });
   return token;
 }

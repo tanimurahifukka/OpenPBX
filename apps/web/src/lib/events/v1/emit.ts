@@ -36,6 +36,15 @@ export function resolveEmitConfig(): EmitConfig | null {
   return { endpoint, token, workspaceId, sourceAccountId, batchLimit, timeoutMs };
 }
 
+// disabled の理由を operator に分かりやすく返す。
+export function describeMissingEmitConfig(): string[] {
+  const missing: string[] = [];
+  if (!process.env.EVENT_PUSH_URL) missing.push('EVENT_PUSH_URL');
+  if (!process.env.EVENT_PUSH_TOKEN) missing.push('EVENT_PUSH_TOKEN');
+  if (!process.env.EVENT_PUSH_WORKSPACE_ID) missing.push('EVENT_PUSH_WORKSPACE_ID');
+  return missing;
+}
+
 // command-room /api/v1/external-events の `incomingUpsertPayloadSchema` (strict) に
 // 整合する envelope。
 //
@@ -227,7 +236,11 @@ const KEY = '__commandRoomEventV1Push';
 export function startEventV1PushLoop(): void {
   const cfg = resolveEmitConfig();
   if (!cfg) {
-    console.log('[event-v1] push disabled (set EVENT_PUSH_URL + EVENT_PUSH_TOKEN to enable)');
+    const missing = describeMissingEmitConfig();
+    console.log(
+      `[event-v1] push disabled. set the following env to enable: ${missing.join(', ')}` +
+        ' (outbox は積まれ続け、設定後の最初の tick で送られる)',
+    );
     return;
   }
   const g = globalThis as unknown as Record<string, NodeJS.Timeout | undefined>;
