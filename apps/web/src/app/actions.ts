@@ -85,14 +85,6 @@ import {
 } from '@/lib/trunks';
 import { scheduleUpgrade, deleteUpgrade } from '@/lib/upgrades';
 import { updateNetworkSettings } from '@/lib/network';
-import {
-  upsertPatient,
-  deletePatient,
-  createPatientRecord,
-  deletePatientRecord,
-  InvalidPatientError,
-} from '@/lib/patients';
-
 function s(v: FormDataEntryValue | null): string {
   return typeof v === 'string' ? v.trim() : '';
 }
@@ -252,6 +244,7 @@ export async function createPhonebookAction(formData: FormData): Promise<void> {
     createPhonebook({
       name: s(formData.get('name')),
       number: s(formData.get('number')),
+      org: s(formData.get('org')) || undefined,
       category: s(formData.get('category')) || undefined,
       note: s(formData.get('note')) || undefined,
     });
@@ -267,6 +260,7 @@ export async function updatePhonebookAction(formData: FormData): Promise<void> {
       id,
       name: s(formData.get('name')),
       number: s(formData.get('number')),
+      org: s(formData.get('org')) || undefined,
       category: s(formData.get('category')) || undefined,
       note: s(formData.get('note')) || undefined,
     });
@@ -697,56 +691,6 @@ export async function scheduleUpgradeAction(formData: FormData): Promise<void> {
       note: s(formData.get('note')) || undefined,
     });
     recordAudit({ actor: me.username, action: 'upgrade.schedule', details: { scheduledAt } });
-  });
-}
-
-export async function upsertPatientAction(formData: FormData): Promise<void> {
-  const id = s(formData.get('id'));
-  await flash(`/patients/${id}`, '患者情報を保存しました', async () => {
-    const me = await requireAccount();
-    upsertPatient({
-      id,
-      name: s(formData.get('name')) || undefined,
-      kana: s(formData.get('kana')) || undefined,
-      birthDate: s(formData.get('birthDate')) || undefined,
-      phone: s(formData.get('phone')) || undefined,
-      note: s(formData.get('note')) || undefined,
-    });
-    recordAudit({ actor: me.username, action: 'patient.upsert', target: id });
-  });
-}
-
-export async function deletePatientAction(formData: FormData): Promise<void> {
-  await flash('/patients', '患者を削除しました', async () => {
-    const me = await requireRole('admin', 'supervisor');
-    const id = s(formData.get('id'));
-    deletePatient(id);
-    recordAudit({ actor: me.username, action: 'patient.delete', target: id });
-  });
-}
-
-export async function savePatientRecordAction(formData: FormData): Promise<void> {
-  const pid = s(formData.get('patientId'));
-  await flash(`/patients/${pid}`, '記録を保存しました', async () => {
-    const me = await requireAccount();
-    createPatientRecord({
-      patientId: pid,
-      extension: s(formData.get('extension')) || undefined,
-      kind: (s(formData.get('kind')) as 'triage' | 'call' | 'note') || 'note',
-      summary: s(formData.get('summary')) || undefined,
-      note: s(formData.get('note')) || undefined,
-    });
-    recordAudit({ actor: me.username, action: 'patient.record.create', target: pid });
-  });
-}
-
-export async function deletePatientRecordAction(formData: FormData): Promise<void> {
-  const pid = s(formData.get('patientId'));
-  await flash(`/patients/${pid}`, '記録を削除しました', async () => {
-    const me = await requireRole('admin', 'supervisor');
-    const id = Number(formData.get('id'));
-    deletePatientRecord(id);
-    recordAudit({ actor: me.username, action: 'patient.record.delete', target: String(id) });
   });
 }
 
