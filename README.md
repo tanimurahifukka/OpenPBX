@@ -145,8 +145,7 @@ docker compose up -d
 2. 内線で使う他端末 (iPhone / Android / Mac / Linux) を **同じ Tailnet** に追加
 3. ブラウザで <http://localhost:3000/network> を開き、
    取得した 100.x.x.x を **External Media Address** と **External Signaling Address** に入力
-4. **Local Net** に
-   `100.64.0.0/10, 192.168.0.0/16, 10.0.0.0/8, 172.16.0.0/12` を入れて保存
+4. **Local Net は空欄のまま** 保存
 5. 出先の SIP クライアント (Groundwire / Linphone / Zoiper) で `Server` に
    その 100.x.x.x を、`Port` に `5060` を、`Username/Password` には `/extensions` の値を入力
 
@@ -156,8 +155,11 @@ docker compose up -d
 
 - `/network` で設定した値が `asterisk/pjsip.d/transports.conf` に自動反映され、Asterisk reload
 - PJSIP の transport セクションに `external_media_address` / `external_signaling_address` /
-  `local_net` を埋め込むことで、Asterisk が **NAT 越しの相手には外部 IP を、ローカル/Tailnet の
-  相手にはそのままの IP を** Contact ヘッダ・RTP に書き分ける
+  必要な場合だけ `local_net` を埋め込むことで、Asterisk が Contact ヘッダ・RTP の外向き IP を
+  正しく返す
+- Mac の Docker Desktop では、スマホ / LAN / Tailnet は Asterisk container から見ると
+  そのまま到達できる「ローカルネット」ではありません。`local_net` に `192.168.0.0/16` や
+  `100.64.0.0/10` を入れると外部 IP 書換が止まり、登録や通話が不安定になります
 - ホスト Mac の Tailscale が `100.x.x.x:5060` を listen し、Docker Desktop の port publish
   経由で Asterisk container に転送
 
@@ -165,8 +167,8 @@ docker compose up -d
 
 - **音が片方向**: RTP ポート (10000-10020/udp) が Tailscale でも通る必要あり。Tailscale は
   UDP をそのまま通すので通常は OK。Mac のファイアウォールで Docker への UDP を許可
-- **登録は通るが通話が切れる**: Local Net 設定漏れ。LAN の CIDR (例 `192.168.0.0/16`) が
-  Local Net に含まれていないと、LAN 内通話でも NAT 書換が暴発する
+- **登録は通るが通話が切れる / 登録が不安定**: Local Net に LAN/Tailnet の CIDR を入れていないか確認。
+  Docker Desktop では通常空欄にする
 - **WAN グローバル IP でも同じ仕組みで動く**: ルータの 5060 + 10000-10020 を forward すれば
   Tailscale を使わずに同じ設定で WAN 公開も可能 (推奨はしない、Tailscale 経由の方が安全)
 
@@ -258,7 +260,7 @@ OpenPBX/
 | --- | --- | --- |
 | admin パスワード | `admin-please-change` | `/me` から変更 |
 | 内線 1001/1002 の secret | `secret-1001` / `secret-1002` | `/extensions` から変更 |
-| AMI secret | `command-room-ami-secret` | `asterisk/manager.conf` + `docker-compose.yml` の env |
+| AMI secret | `openpbx-ami-secret` | `asterisk/manager.conf` + `docker-compose.yml` の env |
 | Server Action 暗号化 key | リポ固定値 | `docker-compose.yml` の `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` (生成: `openssl rand -base64 32`) |
 | Cookie secure フラグ | `false` (LAN 想定) | `apps/web/src/lib/auth.ts` の `createSession` |
 | AMI のアクセス許可レンジ | `172.0.0.0/8` (Docker bridge) | `asterisk/manager.conf` |

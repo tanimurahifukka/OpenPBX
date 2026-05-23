@@ -26,7 +26,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: 'cr-call-selection',
-    title: 'Command Room で発信: %s',
+    title: 'OpenPBX で発信: %s',
     contexts: ['selection'],
   });
 });

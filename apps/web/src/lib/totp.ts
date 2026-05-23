@@ -76,7 +76,7 @@ export function verifyTotp(secretBase32: string, code: string, time = Date.now()
   return false;
 }
 
-export function buildOtpauthUri(account: string, secret: string, issuer = 'Command Room PBX'): string {
+export function buildOtpauthUri(account: string, secret: string, issuer = 'OpenPBX'): string {
   const enc = encodeURIComponent;
   return `otpauth://totp/${enc(issuer)}:${enc(account)}?secret=${secret}&issuer=${enc(issuer)}&algorithm=SHA1&digits=${DIGITS}&period=${STEP}`;
 }

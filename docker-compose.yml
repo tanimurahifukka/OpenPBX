@@ -2,7 +2,7 @@ services:
   asterisk:
     build:
       context: ./asterisk
-    container_name: command-room-asterisk
+    container_name: openpbx-asterisk
     restart: unless-stopped
     # Mac の Docker Desktop は host network mode が beta なので、必要ポートを明示マッピング。
     ports:
@@ -37,12 +37,12 @@ services:
       AMI_SECRET: ${AMI_SECRET:?AMI_SECRET must be set in .env}
     command: ["/usr/local/bin/entrypoint.sh"]
     networks:
-      - command-room
+      - openpbx
 
   web:
     build:
       context: ./apps/web
-    container_name: command-room-web
+    container_name: openpbx-web
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -77,8 +77,8 @@ services:
       # production 配信時は 1 にする (HTTPS 必須化 + cookie secure)
       COOKIE_SECURE: ${COOKIE_SECURE:-0}
     networks:
-      - command-room
+      - openpbx
 
 networks:
-  command-room:
+  openpbx:
     driver: bridge

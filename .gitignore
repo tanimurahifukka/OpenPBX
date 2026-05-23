@@ -27,3 +27,13 @@ asterisk/certs/*.key
 
 # 退避済み AI 統合層 (隣に置く想定だが、誤って同梱されないよう)
 ../command-room-ai/
+
+# binary/generated build artifacts
+apps/web/tsconfig.tsbuildinfo
+
+# local docker-compose overrides (do not commit)
+docker-compose.override.yml
+docker-compose.override.yml.bak
+
+# transient event outbox JSON (生成物。古い WIP commit 由来)
+data/outbox-v1/

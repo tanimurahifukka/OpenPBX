@@ -88,14 +88,19 @@ export default async function NetworkPage() {
             />
           </label>
           <label className="block text-xs text-slate-600">
-            Local Net (NAT を通さない CIDR、カンマ区切り)
+            Local Net (NAT 書換を止める CIDR、通常は空欄)
             <input
               name="localNet"
               defaultValue={net.localNet ?? ''}
-              placeholder="例: 192.168.0.0/16, 100.64.0.0/10, 10.0.0.0/8, 172.16.0.0/12"
+              placeholder="Docker Desktop では空欄推奨"
               className="mt-1 w-full rounded border border-slate-300 px-2 py-1 font-mono text-sm"
             />
           </label>
+          <p className="text-[11px] text-slate-500">
+            Mac の Docker Desktop で動かす場合、スマホや Tailnet の CIDR を Local Net に入れると
+            外部アドレスへの書換が止まり、通話や登録が不安定になります。Asterisk が直接そのネットワークに
+            到達できる構成だけ指定してください。
+          </p>
           <button
             type="submit"
             className="rounded bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white"
@@ -115,10 +120,7 @@ export default async function NetworkPage() {
           <li>Tailscale 管理画面で同じ Tailnet に内線で使う端末 (iPhone / Android / Mac / Linux) を追加</li>
           <li>ホスト Mac で <code>tailscale ip -4</code> を実行して 100.x.x.x の IP を取得</li>
           <li>その IP を上の「External Media Address」「External Signaling Address」に入力 → 保存</li>
-          <li>
-            Local Net に <code>100.64.0.0/10, 192.168.0.0/16, 10.0.0.0/8, 172.16.0.0/12</code>{' '}
-            を入れておくと、同一 LAN / Tailnet からの登録は NAT 書換なしで通る
-          </li>
+          <li>Local Net は空欄のまま保存する。Docker Desktop では Tailnet / LAN の CIDR を入れない</li>
           <li>
             Groundwire / Linphone / Zoiper など SIP クライアントの Server 欄に Tailscale IP を指定
             (Port は 5060)。Tailnet に同じ端末が居れば、外出先からでもそのまま内線として使えます。

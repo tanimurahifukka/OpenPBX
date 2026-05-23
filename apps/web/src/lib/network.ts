@@ -1,14 +1,14 @@
 // 外部 IP / NAT 設定 (Tailscale や WAN グローバル IP を Web から設定)。
 // PJSIP の transport セクションに external_media_address / external_signaling_address /
-// local_net を埋め込んで、リモート (Tailscale や WAN) からの登録時に正しい
-// メディアアドレスを返せるようにする。
+// local_net を必要な場合だけ埋め込んで、リモート (Tailscale や WAN) からの
+// 登録時に正しいメディアアドレスを返せるようにする。
 
 import { getDb } from './db';
 
 export interface NetworkSettings {
   externalIp: string | null;          // RTP メディアの外向きアドレス
   externalSignalingIp: string | null; // SIP signaling の外向きアドレス
-  localNet: string | null;             // NAT を通さない CIDR (カンマ区切り可)
+  localNet: string | null;             // NAT 書換を止める CIDR (Docker Desktop では通常 null)
   updatedAt: string;
 }
 
