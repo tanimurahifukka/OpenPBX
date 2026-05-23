@@ -33,6 +33,8 @@ services:
       - ./data/asterisk-cdr:/var/log/asterisk/cdr-csv
     environment:
       INBOX_DIR: /inbox
+      # entrypoint.sh が manager.conf.template の __AMI_SECRET__ をこの値で置換して生成する。
+      AMI_SECRET: ${AMI_SECRET:?AMI_SECRET must be set in .env}
     command: ["/usr/local/bin/entrypoint.sh"]
     networks:
       - command-room
