@@ -54,12 +54,6 @@ export default async function PatientDetailPage({
             {p.phone ? `/ ${p.phone}` : ''}
           </p>
         </div>
-        <a
-          href={`/triage?patient=${p.id}`}
-          className="rounded bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
-        >
-          🩺 問診を始める
-        </a>
       </header>
 
       <section className="rounded-lg border border-slate-200 bg-white p-4">
@@ -120,7 +114,6 @@ export default async function PatientDetailPage({
             >
               <option value="note">メモ</option>
               <option value="call">通話</option>
-              <option value="triage">問診</option>
             </select>
             <input
               name="note"
