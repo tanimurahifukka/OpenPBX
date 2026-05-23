@@ -1,0 +1,33 @@
+{
+  "workspaceId": "00000000-0000-0000-0000-000000000001",
+  "sourceType": "phone_stt",
+  "sourceAccountId": "pbx:clinic-main",
+  "externalId": "openpbx:clinic-main:1779019841.7",
+  "summary": "[22:34] 録音なし (9000) Reception 1003 #1779019841",
+  "localPointer": {
+    "type": "pbx_edge",
+    "pbxInstanceId": "clinic-main",
+    "uniqueId": "1779019841.7",
+    "recordingRelativePath": null,
+    "uri": "pbx://clinic-main/1779019841.7"
+  },
+  "metadataJson": {
+    "schema": "command-room-pbx/event/v1",
+    "eventId": "openpbx:clinic-main:1779019841.7",
+    "source": "openpbx",
+    "pbxInstanceId": "clinic-main",
+    "workspaceExternalKey": "tamura-hifuka",
+    "call": {
+      "uniqueId": "1779019841.7",
+      "kind": "no_recording",
+      "direction": "inbound",
+      "extension": "9000",
+      "callerId": "1003",
+      "callerName": "Reception 1003",
+      "calleeExtension": null,
+      "durationSec": 3
+    },
+    "recording": null,
+    "receivedAt": "2026-05-17T13:34:08Z"
+  }
+}

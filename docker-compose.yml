@@ -51,6 +51,9 @@ services:
       - ./data/inbox:/app/data/inbox:ro
       - ./data/recordings:/app/data/recordings:ro
       - ./data/asterisk-cdr:/app/data/asterisk-cdr:ro
+      # event-v1 outbox: watcher が upgrade した <eventId>.json を書き、push loop が読む。
+      # コンテナ再起動で消えないようホスト側 ./data/outbox-v1 に永続化する。
+      - ./data/outbox-v1:/app/data/outbox-v1
       - ./asterisk/sounds:/sounds
       - ./asterisk/pjsip.d:/asterisk/pjsip.d
       - ./asterisk/dialplan.d:/asterisk/dialplan.d
@@ -74,8 +77,22 @@ services:
       # 初期 admin 投入用 (初回起動だけ使う / 必ず変更すること)
       BOOTSTRAP_ADMIN_USERNAME: ${BOOTSTRAP_ADMIN_USERNAME:-admin}
       BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
-      # production 配信時は 1 にする (HTTPS 必須化 + cookie secure)
+      # HTTPS リバプロを置いたときだけ 1 にする (cookie secure 強制)
       COOKIE_SECURE: ${COOKIE_SECURE:-0}
+      # event-v1 watcher / push loop の設定。これらは optional。
+      # EVENT_PUSH_* が揃ったときだけ push loop が起動し、outbox を command-room に送る。
+      EVENT_INBOX_DIR: ${EVENT_INBOX_DIR:-/app/data/inbox}
+      EVENT_OUTBOX_V1_DIR: ${EVENT_OUTBOX_V1_DIR:-/app/data/outbox-v1}
+      EVENT_RECORDINGS_DIR: ${EVENT_RECORDINGS_DIR:-/app/data/recordings}
+      OPENPBX_INSTANCE_ID: ${OPENPBX_INSTANCE_ID:-pbx-dev}
+      OPENPBX_WORKSPACE_KEY: ${OPENPBX_WORKSPACE_KEY:-workspace-dev}
+      EVENT_COMPUTE_RECORDING_METRICS: ${EVENT_COMPUTE_RECORDING_METRICS:-0}
+      EVENT_PUSH_URL: ${EVENT_PUSH_URL:-}
+      EVENT_PUSH_TOKEN: ${EVENT_PUSH_TOKEN:-}
+      EVENT_PUSH_WORKSPACE_ID: ${EVENT_PUSH_WORKSPACE_ID:-}
+      EVENT_PUSH_SOURCE_ACCOUNT_ID: ${EVENT_PUSH_SOURCE_ACCOUNT_ID:-}
+      EVENT_PUSH_BATCH: ${EVENT_PUSH_BATCH:-20}
+      EVENT_PUSH_TIMEOUT_MS: ${EVENT_PUSH_TIMEOUT_MS:-15000}
     networks:
       - openpbx
 

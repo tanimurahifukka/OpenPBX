@@ -45,14 +45,22 @@ command-room はこのイベントを `ExternalEvent` / `CallRecord` に upsert 
 - command-room 側の inbox ingestor（Step 4 で実装）がこの outbox-v1 を消化
 
 ### 3.2 HTTP push（feature flag、optional）
+
 - 送信先: command-room の **既存** `POST /api/v1/external-events`
-- 認証: device-token（既存 `LocalNode` 流儀）
-- envelope: command-room 側 ExternalEvent upsert schema に乗せる
-  - `sourceType = "pbx_edge"`
-  - `sourceAccountId = <pbxInstanceId>`
-  - `externalId = <eventId>`
-  - `payload = <本契約 v1 の本文>`
+- 認証: device-token (`X-Command-Room-Device-Token` header / 既存 `LocalNode` 流儀)
+- envelope: command-room 側 ExternalEvent upsert schema (`incomingUpsertPayloadSchema` strict) に乗せる
+  - `workspaceId`: command-room の Workspace UUID (env `EVENT_PUSH_WORKSPACE_ID`)
+  - `sourceType = "phone_stt"` ← command-room の `IngestSourceType` enum 値を再利用する (新 enum 値は追加しない)
+  - `sourceAccountId = <env EVENT_PUSH_SOURCE_ACCOUNT_ID か、未指定なら "pbx:<pbxInstanceId>">`
+  - `externalId = <eventId>` (本契約 §5)
+  - `summary = "[HH:MM] <ja-label> (<extension>) <caller> #<uniqueShort>"`
+  - `localPointer`:
+    - `type = "pbx_edge"` ← command-room PR2 で追加した discriminated union variant
+    - `pbxInstanceId`, `uniqueId`, `recordingRelativePath`, `uri = "pbx://<inst>/<uniqueId>[/<recording>]"`
+  - `metadataJson = <本契約 v1 の本文>` ← `kind` を含む全フィールド
 - SourceConnectorDefinition `key = "openpbx_edge"` を command-room catalog に追加（Step 5 で実装）
+
+> `sourceType` と `localPointer.type` は別物。command-room の ingest path 識別に `phone_stt` を使い、payload の origin 種別に `pbx_edge` を使う 2 階層構造になっている (cross-repo review 0016)。
 
 > command-room → OpenPBX 方向の push / Asterisk 直接操作は**禁止**。
 
@@ -101,8 +109,8 @@ command-room はこのイベントを `ExternalEvent` / `CallRecord` に upsert 
 | `call.kind` | enum | yes | §6 |
 | `call.direction` | enum | yes | §7 |
 | `call.extension` | string | yes | dialplan の `${EXTEN}` |
-| `call.callerId` | string | yes | 不明時は空文字 |
-| `call.callerName` | string | no | 不明時は空文字 or 省略 |
+| `call.callerId` | string | yes | 不明時は空文字。command-room 側で maskCallerNumber を適用してから保存される (ADR 0016) |
+| `call.callerName` | string \| null | no | 任意。空文字 / null / 省略どれでも valid。emit 側は trim 後 falsy なら 'unknown' に置換して `summary` を組み立てる |
 | `call.calleeExtension` | string | no | transfer 後の最終内線 |
 | `call.durationSec` | int\|null | no | null 可 |
 | `recording` | object\|null | yes | null = §6 `no_recording` |
