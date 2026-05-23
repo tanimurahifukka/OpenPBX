@@ -1,7 +1,8 @@
 import { listIvrMenus } from '@/lib/ivr';
 import { upsertIvrAction, deleteIvrAction } from '@/app/actions';
-import { IvrEditor } from './IvrEditor';
+import { IvrEditor, type GuidanceChoice } from './IvrEditor';
 import { requireAccount } from '@/lib/auth';
+import { listGuidances } from '@/lib/guidances';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -9,6 +10,11 @@ export const revalidate = 0;
 export default async function IvrPage() {
   await requireAccount();
   const menus = listIvrMenus();
+  const guidances: GuidanceChoice[] = listGuidances().map((g) => ({
+    path: g.name,
+    // 任意の text フィールドを優先的にラベルにし、無ければ name (Asterisk path) を見せる。
+    label: g.text?.trim() ? `${g.name} — ${g.text.slice(0, 40)}` : g.name,
+  }));
   const totalBranches = menus.reduce((sum, menu) => sum + menu.options.length, 0);
   const callerIdRoutes = menus.reduce((sum, menu) => sum + menu.callerIdRoutes.length, 0);
   const afterHoursMenus = menus.filter((menu) => menu.afterHoursAction).length;
@@ -109,6 +115,7 @@ export default async function IvrPage() {
                   initial={menu}
                   upsertAction={upsertIvrAction}
                   deleteAction={deleteIvrAction}
+                  guidances={guidances}
                 />
               </li>
             ))}
@@ -121,7 +128,7 @@ export default async function IvrPage() {
           <p className="text-xs font-bold text-emerald-700">新規ルール</p>
           <h3 className="text-lg font-bold text-slate-950">新しいIVRを追加</h3>
         </div>
-        <IvrEditor upsertAction={upsertIvrAction} />
+        <IvrEditor upsertAction={upsertIvrAction} guidances={guidances} />
       </section>
     </div>
   );
