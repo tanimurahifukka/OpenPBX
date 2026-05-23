@@ -85,7 +85,9 @@ CREATE TABLE IF NOT EXISTS phonebook (
 );
 CREATE INDEX IF NOT EXISTS idx_phonebook_number ON phonebook(number);
 CREATE INDEX IF NOT EXISTS idx_phonebook_name   ON phonebook(name);
-CREATE INDEX IF NOT EXISTS idx_phonebook_org    ON phonebook(org);
+-- idx_phonebook_org は migratePhonebook 内で org 列の ALTER 後に作る
+-- (CREATE TABLE IF NOT EXISTS は既存 DB だと no-op なため、org 列がまだ無い状態で
+--  CREATE INDEX を走らせると "no such column" で applySchema 全体が失敗する)
 
 CREATE TABLE IF NOT EXISTS holidays (
   date       TEXT PRIMARY KEY,   -- YYYY-MM-DD
@@ -277,12 +279,14 @@ export function applySchema(db: Database.Database): void {
 }
 
 // 既存 phonebook に org 列を後付け追加する冪等マイグレーション。
+// CREATE INDEX idx_phonebook_org も org 列の存在を確認した後でここで作る。
 function migratePhonebook(db: Database.Database): void {
   const cols = db.prepare(`PRAGMA table_info(phonebook)`).all() as Array<{ name: string }>;
   const names = new Set(cols.map((c) => c.name));
   if (!names.has('org')) {
     db.exec(`ALTER TABLE phonebook ADD COLUMN org TEXT`);
   }
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_phonebook_org ON phonebook(org)`);
 }
 
 // patients / patient_records は廃止。古い DB に残っている場合は削除する。
