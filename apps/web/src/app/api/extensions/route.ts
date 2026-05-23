@@ -5,15 +5,20 @@ import {
   writePjsipConfigAndReload,
   InvalidExtensionError,
 } from '@/lib/extensions';
+import { requireApi } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  const auth = await requireApi();
+  if (auth instanceof Response) return auth;
   return NextResponse.json({ extensions: listExtensions() });
 }
 
 export async function POST(req: Request) {
+  const auth = await requireApi(['admin']);
+  if (auth instanceof Response) return auth;
   let body: unknown;
   try {
     body = await req.json();

@@ -2,6 +2,7 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import { listExtensions } from '@/lib/extensions';
 import { listDevices, amiClient, amiIsReady } from '@/lib/ami';
+import { requireAccount } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -29,6 +30,7 @@ async function mtime(filePath: string): Promise<string | null> {
 }
 
 export default async function OverviewPage() {
+  await requireAccount();
   amiClient(); // 起動 (lazy)
   const extensions = listExtensions();
   const devices = listDevices().filter((d) => d.device.startsWith('PJSIP/') && d.extension);

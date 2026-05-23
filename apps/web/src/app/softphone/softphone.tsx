@@ -5,13 +5,13 @@ import { useEffect, useRef, useState } from 'react';
 // sip.js は CDN から動的 import (依存追加なしのため)。
 // 注: ホスト Mac で `mkcert localhost` 等で生成した証明書を asterisk/certs/ に置く前提。
 
-interface ExtensionCred {
+interface ExtensionInfo {
   number: string;
-  secret: string;
+  displayName: string | null;
 }
 
 interface SoftphoneProps {
-  extensions: ExtensionCred[];
+  extensions: ExtensionInfo[];
 }
 
 declare global {
@@ -22,10 +22,13 @@ declare global {
 }
 
 export function Softphone({ extensions }: SoftphoneProps) {
-  const [selected, setSelected] = useState<ExtensionCred | null>(extensions[0] ?? null);
+  const [selected, setSelected] = useState<ExtensionInfo | null>(extensions[0] ?? null);
   const [status, setStatus] = useState<string>('disconnected');
   const [target, setTarget] = useState<string>('');
   const [host, setHost] = useState<string>(typeof window !== 'undefined' ? window.location.hostname : 'localhost');
+  // SIP password はサーバから渡さず、登録のたびにユーザに入力させる。
+  // メモリ上のみで保持し、disconnect 時にクリアする。
+  const [sipPassword, setSipPassword] = useState<string>('');
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const uaRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -43,6 +46,10 @@ export function Softphone({ extensions }: SoftphoneProps) {
 
   async function connect() {
     if (!selected) return;
+    if (!sipPassword) {
+      setStatus('SIP パスワードを入力してください');
+      return;
+    }
     if (!window.SIP) {
       setStatus('sip.js が読込中…');
       return;
@@ -54,7 +61,7 @@ export function Softphone({ extensions }: SoftphoneProps) {
       uri,
       transportOptions: { server: `wss://${host}:8089/ws` },
       authorizationUsername: selected.number,
-      authorizationPassword: selected.secret,
+      authorizationPassword: sipPassword,
       delegate: {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onInvite(invitation: any) {
@@ -86,6 +93,7 @@ export function Softphone({ extensions }: SoftphoneProps) {
       await uaRef.current.stop();
       uaRef.current = null;
     }
+    setSipPassword('');
     setStatus('disconnected');
   }
 
@@ -133,7 +141,7 @@ export function Softphone({ extensions }: SoftphoneProps) {
 
   return (
     <section className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
-      <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
+      <div className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2">
         <label className="text-xs text-slate-600">
           内線
           <select
@@ -144,9 +152,21 @@ export function Softphone({ extensions }: SoftphoneProps) {
             {extensions.map((e) => (
               <option key={e.number} value={e.number}>
                 {e.number}
+                {e.displayName ? ` (${e.displayName})` : ''}
               </option>
             ))}
           </select>
+        </label>
+        <label className="text-xs text-slate-600">
+          SIP パスワード
+          <input
+            type="password"
+            autoComplete="new-password"
+            value={sipPassword}
+            onChange={(e) => setSipPassword(e.target.value)}
+            className="mt-1 w-full rounded border border-slate-300 px-2 py-1 font-mono text-sm"
+            aria-label="SIP パスワード (登録時のみ使用、保存しない)"
+          />
         </label>
         <label className="text-xs text-slate-600">
           Asterisk host

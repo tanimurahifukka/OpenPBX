@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import path from 'node:path';
 import fs from 'node:fs';
 import { stat } from 'node:fs/promises';
+import { requireApi } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -10,6 +11,8 @@ const RECORDINGS_DIR = process.env.RECORDINGS_DIR ?? '/app/data/recordings';
 const SAFE_NAME = /^[A-Za-z0-9._-]+\.wav$/;
 
 export async function GET(_req: Request, { params }: { params: Promise<{ file: string }> }) {
+  const auth = await requireApi();
+  if (auth instanceof Response) return auth;
   const { file } = await params;
   if (!SAFE_NAME.test(file)) {
     return NextResponse.json({ error: 'invalid filename' }, { status: 400 });

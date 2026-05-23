@@ -173,8 +173,20 @@ export async function pushOne(
     return { status: 'sent', httpStatus: res.status };
   }
   const errBody = await res.text().catch(() => '');
+  // 4xx の分類:
+  //   400 / 422 = contract 違反 → 再送しても通らない (dead)
+  //   401 / 403 = device-token / 権限ミス → 設定修正で復活する余地あり (failed, 再送可能)
+  //   404       = endpoint URL の typo / workspace 削除 → 設定修正で復活 (failed)
+  //   409       = 重複 (idempotency) → 既に取り込まれた扱い (sent)
+  //   429       = rate limit → リトライ (failed)
+  //   その他 4xx = 安全側で dead (異常ケースとして alert される)
+  if (res.status === 409) {
+    return { status: 'sent', httpStatus: res.status };
+  }
+  if (res.status === 401 || res.status === 403 || res.status === 404 || res.status === 429) {
+    return { status: 'failed', httpStatus: res.status, error: `${res.status}: ${errBody.slice(0, 200)}` };
+  }
   if (res.status >= 400 && res.status < 500) {
-    // contract 違反 / auth 失敗 → 再送しない。
     return { status: 'dead', httpStatus: res.status, error: `${res.status}: ${errBody.slice(0, 200)}` };
   }
   return { status: 'failed', httpStatus: res.status, error: `${res.status}: ${errBody.slice(0, 200)}` };

@@ -20,7 +20,7 @@ services:
       - ./asterisk/modules.conf:/etc/asterisk/modules.conf:ro
       - ./asterisk/logger.conf:/etc/asterisk/logger.conf:ro
       - ./asterisk/rtp.conf:/etc/asterisk/rtp.conf:ro
-      - ./asterisk/manager.conf:/etc/asterisk/manager.conf:ro
+      - ./asterisk/manager.conf:/etc/asterisk/manager.conf.template:ro
       - ./asterisk/cdr.conf:/etc/asterisk/cdr.conf:ro
       - ./asterisk/http.conf:/etc/asterisk/http.conf:ro
       - ./asterisk/certs:/etc/asterisk/certs:ro
@@ -63,12 +63,17 @@ services:
       ASTERISK_SIGNAL_DIR: /asterisk/signals
       AMI_HOST: asterisk
       AMI_PORT: "5038"
-      AMI_USERNAME: command-room
-      AMI_SECRET: command-room-ami-secret
+      AMI_USERNAME: ${AMI_USERNAME:?AMI_USERNAME must be set in .env}
+      AMI_SECRET: ${AMI_SECRET:?AMI_SECRET must be set in .env}
       CDR_CSV_PATH: /app/data/asterisk-cdr/Master.csv
       SOUNDS_DIR: /sounds
       # Server Action のハッシュ化を再ビルド間で安定させる (古いタブからの呼び出しが 404 にならない)
-      NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: /RYJ01by2xFCY498hIqUlOMmCEG5Q/gqDZHfubOpZmA=
+      NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: ${NEXT_SERVER_ACTIONS_ENCRYPTION_KEY:?must be set in .env}
+      # 初期 admin 投入用 (初回起動だけ使う / 必ず変更すること)
+      BOOTSTRAP_ADMIN_USERNAME: ${BOOTSTRAP_ADMIN_USERNAME:-admin}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+      # production 配信時は 1 にする (HTTPS 必須化 + cookie secure)
+      COOKIE_SECURE: ${COOKIE_SECURE:-0}
     networks:
       - command-room
 

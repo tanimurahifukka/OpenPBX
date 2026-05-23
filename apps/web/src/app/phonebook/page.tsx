@@ -5,6 +5,7 @@ import {
   deletePhonebookAction,
 } from '@/app/actions';
 import { ConfirmButton } from '@/components/ConfirmButton';
+import { requireAccount } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -14,6 +15,7 @@ interface SearchParams {
 }
 
 export default async function PhonebookPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  await requireAccount();
   const sp = await searchParams;
   const entries = listPhonebook(sp.q);
   return (

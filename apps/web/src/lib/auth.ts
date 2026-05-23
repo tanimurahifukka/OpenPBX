@@ -2,6 +2,7 @@
 import { cookies, headers } from 'next/headers';
 import crypto from 'node:crypto';
 import { getDb } from './db';
+import { validatePassword, getPolicy } from './policy';
 
 export type Role = 'user' | 'supervisor' | 'admin';
 
@@ -100,7 +101,7 @@ export function createAccount(input: {
 }): Account {
   const username = input.username.trim();
   if (!/^[A-Za-z0-9_-]{3,32}$/.test(username)) throw new Error('username は 3〜32 文字の英数 / _ / -');
-  if (!input.password || input.password.length < 8) throw new Error('password は 8 文字以上');
+  enforcePasswordPolicy(input.password);
   if (getAccountByUsername(username)) throw new Error(`username 重複: ${username}`);
   const role: Role = input.role ?? 'user';
   getDb()
@@ -113,10 +114,39 @@ export function createAccount(input: {
 }
 
 export function updateAccountPassword(id: number, plain: string): void {
-  if (!plain || plain.length < 8) throw new Error('password は 8 文字以上');
+  enforcePasswordPolicy(plain);
   getDb()
     .prepare(`UPDATE accounts SET password_hash = ?, updated_at = datetime('now') WHERE id = ?`)
     .run(hashPassword(plain), id);
+}
+
+// password_policies に従って強度を検証する。失敗したらユーザ向け日本語で throw する。
+function enforcePasswordPolicy(plain: string): void {
+  if (!plain) throw new Error('password は必須');
+  // 最低 8 文字は policy が低く設定されていても保証する。
+  if (plain.length < 8) throw new Error('password は 8 文字以上');
+  const errs = validatePassword(plain);
+  if (errs.length > 0) {
+    throw new Error(`パスワード条件: ${errs.join(' / ')}`);
+  }
+}
+
+// lockout: 直近の失敗ログイン回数が policy の閾値を超えていれば true。
+// 失敗回数のカウントは login_history を「直近の成功までの遡及」で見るのが妥当だが、
+// 単純化のため「直近 15 分の失敗のみ」を集計する。
+export function isAccountLockedOut(username: string): boolean {
+  const policy = getPolicy();
+  const threshold = policy.lockoutThreshold;
+  if (!threshold || threshold <= 0) return false;
+  const row = getDb()
+    .prepare(
+      `SELECT COUNT(*) AS c FROM login_history
+        WHERE username = ?
+          AND success = 0
+          AND datetime(created_at) > datetime('now', '-15 minutes')`,
+    )
+    .get(username) as { c: number };
+  return row.c >= threshold;
 }
 
 export function updateAccountRole(id: number, role: Role): void {
@@ -247,7 +277,8 @@ export async function createSession(accountId: number, meta?: { ip?: string; use
     sameSite: 'lax',
     path: '/',
     expires: new Date(expires),
-    secure: false, // MVP は LAN 想定。production は true
+    // COOKIE_SECURE=1 (HTTPS 経由 / production) ならtrue。LAN MVP 用 HTTP では false。
+    secure: process.env.COOKIE_SECURE === '1' || process.env.NODE_ENV === 'production',
   });
   return token;
 }
@@ -289,6 +320,19 @@ export async function requireRole(...roles: Role[]): Promise<Account> {
   return a;
 }
 
+// API ルート用: 認証/認可に失敗したら 401/403 の Response、成功したら Account を返す。
+// 呼び側で `const r = await requireApi(['admin']); if (r instanceof Response) return r;` のように使う。
+import { NextResponse } from 'next/server';
+export async function requireApi(roles?: Role[]): Promise<Account | Response> {
+  try {
+    return roles && roles.length > 0 ? await requireRole(...roles) : await requireAccount();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'unauthorized';
+    const status = msg === 'forbidden' ? 403 : 401;
+    return NextResponse.json({ error: msg }, { status });
+  }
+}
+
 export async function requestMeta(): Promise<{ ip?: string; userAgent?: string }> {
   const h = await headers();
   return {
@@ -297,16 +341,27 @@ export async function requestMeta(): Promise<{ ip?: string; userAgent?: string }
   };
 }
 
-// 初回起動時に admin/admin が無ければ作る (MVP)。
+// 初回起動時に admin が無ければ env から作る。
+// BOOTSTRAP_ADMIN_PASSWORD を必須にして、固定 password "admin-please-change" のハードコードを排除した。
+// env が無い場合は admin を作らず、ログだけ出す (db に admin が無いと事実上ロックアウトされる
+// が、固定 password よりは安全寄り)。
 export function ensureBootstrapAdmin(): void {
   const c = getDb().prepare('SELECT COUNT(*) as c FROM accounts').get() as { c: number };
-  if (c.c === 0) {
-    createAccount({
-      username: 'admin',
-      displayName: 'Administrator',
-      password: 'admin-please-change',
-      role: 'admin',
-    });
-    console.log('[auth] bootstrap admin account created (username=admin, password=admin-please-change)');
+  if (c.c !== 0) return;
+  const username = process.env.BOOTSTRAP_ADMIN_USERNAME?.trim() || 'admin';
+  const password = process.env.BOOTSTRAP_ADMIN_PASSWORD?.trim();
+  if (!password || password.length < 8) {
+    console.warn(
+      '[auth] BOOTSTRAP_ADMIN_PASSWORD が未設定 (または 8 文字未満) のため初期 admin を作成しませんでした。' +
+        ' .env に強いパスワードを設定して再起動してください。',
+    );
+    return;
   }
+  createAccount({
+    username,
+    displayName: 'Administrator',
+    password,
+    role: 'admin',
+  });
+  console.log(`[auth] bootstrap admin account created (username=${username})`);
 }

@@ -25,6 +25,17 @@ export interface SipTrunk {
 export class InvalidTrunkError extends Error {}
 
 const NAME_RE = /^[A-Za-z0-9_-]{1,32}$/;
+// host: FQDN or IPv4 or IPv6 (角括弧なし) のみ。改行・空白・カンマ等の区切り文字を拒否。
+const HOST_RE = /^[A-Za-z0-9.:_-]{1,253}$/;
+// username/from_user: 英数 + 限定記号のみ。
+const USERNAME_RE = /^[A-Za-z0-9._+-]{1,64}$/;
+// secret: 改行・キャリッジリターン・タブ・; を禁止。それ以外の制御文字も禁止。
+// セミコロンは PJSIP config のコメント開始文字なので config injection の起点。
+const SECRET_RE = /^[\x21-\x3A\x3C-\x7E]{1,128}$/;
+// from_domain: ホスト名/IP に準ずる。
+const DOMAIN_RE = /^[A-Za-z0-9.:_-]{1,253}$/;
+// DID 番号/outbound prefix: 数字と + * # のみ。
+const DIGITS_RE = /^[0-9+*#]{1,16}$/;
 
 interface Row {
   id: number;
@@ -85,9 +96,27 @@ export interface UpsertTrunkInput {
 
 function validate(i: UpsertTrunkInput): void {
   if (!NAME_RE.test(i.name)) throw new InvalidTrunkError('name は 1-32 文字、英数 / _ / -');
-  if (!i.host.trim()) throw new InvalidTrunkError('host は必須');
+  if (!HOST_RE.test(i.host.trim())) throw new InvalidTrunkError('host は FQDN または IP のみ (改行/空白/区切り文字不可)');
   const port = i.port ?? 5060;
-  if (port < 1 || port > 65535) throw new InvalidTrunkError('port は 1-65535');
+  if (!Number.isInteger(port) || port < 1 || port > 65535) throw new InvalidTrunkError('port は 1-65535 の整数');
+  if (i.username != null && i.username !== '' && !USERNAME_RE.test(i.username)) {
+    throw new InvalidTrunkError('username は英数 . _ + - のみ (64 文字以内)');
+  }
+  if (i.secret != null && i.secret !== '' && !SECRET_RE.test(i.secret)) {
+    throw new InvalidTrunkError('secret に改行・空白・セミコロン・制御文字は含められません');
+  }
+  if (i.fromUser != null && i.fromUser !== '' && !USERNAME_RE.test(i.fromUser)) {
+    throw new InvalidTrunkError('from_user は英数 . _ + - のみ (64 文字以内)');
+  }
+  if (i.fromDomain != null && i.fromDomain !== '' && !DOMAIN_RE.test(i.fromDomain)) {
+    throw new InvalidTrunkError('from_domain は FQDN または IP のみ');
+  }
+  if (i.didInbound != null && i.didInbound !== '' && !DIGITS_RE.test(i.didInbound)) {
+    throw new InvalidTrunkError('DID inbound は数字 / + / * / # のみ (16 桁以内)');
+  }
+  if (i.outboundPrefix != null && i.outboundPrefix !== '' && !DIGITS_RE.test(i.outboundPrefix)) {
+    throw new InvalidTrunkError('outbound prefix は数字 / + / * / # のみ (16 桁以内)');
+  }
 }
 
 export function upsertTrunk(input: UpsertTrunkInput): SipTrunk {

@@ -5,11 +5,13 @@ import {
   deleteExtensionAction,
 } from '@/app/actions';
 import { ConfirmButton } from '@/components/ConfirmButton';
+import { requireAccount } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export default function ExtensionsPage() {
+export default async function ExtensionsPage() {
+  await requireAccount();
   const items = listExtensions();
   return (
     <div className="space-y-6">

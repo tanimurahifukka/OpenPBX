@@ -4,11 +4,13 @@ import {
   deleteIvrAction,
 } from '@/app/actions';
 import { ConfirmButton } from '@/components/ConfirmButton';
+import { requireAccount } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export default function IvrPage() {
+export default async function IvrPage() {
+  await requireAccount();
   const menus = listIvrMenus();
   return (
     <div className="space-y-6">

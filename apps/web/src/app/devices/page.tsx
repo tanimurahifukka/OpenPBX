@@ -1,10 +1,12 @@
 import { DeviceList } from './device-list';
 import { listDevices, amiIsReady, amiClient } from '@/lib/ami';
+import { requireAccount } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export default function DevicesPage() {
+export default async function DevicesPage() {
+  await requireAccount();
   // 初回 SSR で AMI を起動 (シングルトン初期化)
   amiClient();
   const devices = listDevices();

@@ -93,6 +93,15 @@ function isLikelyLegacyMetaFilename(name: string): boolean {
   return name.endsWith('.meta.json');
 }
 
+// In-memory mtime cursor。プロセス起動時はリセットされ全走査するが、その後は
+// この時刻より新しい meta.json のみを対象にして毎 tick の I/O を抑える。
+// 冪等性は outbox ファイル存在チェック + upsertPending の ON CONFLICT で別途担保。
+let mtimeCursorMs = 0;
+
+export function _resetMtimeCursorForTests(): void {
+  mtimeCursorMs = 0;
+}
+
 export async function processOnce(
   cfg: EventV1WatcherConfig = resolveWatcherConfig(),
 ): Promise<ProcessOnceResult> {
@@ -112,10 +121,25 @@ export async function processOnce(
     return result;
   }
 
+  let maxSeenMtimeMs = mtimeCursorMs;
+
   for (const name of entries) {
     if (!isLikelyLegacyMetaFilename(name)) continue;
-    result.scanned += 1;
     const fullPath = path.join(cfg.inboxDir, name);
+    // cursor より古いファイルは前回処理済みとみなしてスキップ。
+    // 同 ms に複数生成された場合の取りこぼし回避のため `>=` ではなく `>` で比較する。
+    // (cursor 確定の直前に生まれたファイルは次 tick で拾う。)
+    let mtimeMs = 0;
+    try {
+      const st = await fs.stat(fullPath);
+      mtimeMs = st.mtimeMs;
+      if (mtimeCursorMs > 0 && mtimeMs <= mtimeCursorMs) continue;
+      if (mtimeMs > maxSeenMtimeMs) maxSeenMtimeMs = mtimeMs;
+    } catch {
+      // stat 失敗 (一時ファイル等) は無視。次 tick で再評価。
+      continue;
+    }
+    result.scanned += 1;
     const raw = await safeReadJson(fullPath);
     if (!raw) {
       result.errors += 1;
@@ -158,6 +182,13 @@ export async function processOnce(
     const inserted = upsertPending(event.eventId, event);
     if (isNew || inserted) result.upgraded += 1;
     else result.skipped += 1;
+  }
+
+  // 次回 tick 用に cursor を進める。
+  // エラーで処理失敗した meta は cursor の対象に含まれてしまうと再走査されない。
+  // ただし errors > 0 のときは cursor を据え置きにして次 tick で再試行する。
+  if (result.errors === 0 && maxSeenMtimeMs > mtimeCursorMs) {
+    mtimeCursorMs = maxSeenMtimeMs;
   }
 
   try {
