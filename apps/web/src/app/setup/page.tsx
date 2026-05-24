@@ -20,13 +20,37 @@ const OUTBOX_DIR = process.env.EVENT_OUTBOX_V1_DIR ?? '/app/data/outbox-v1';
 
 type Tone = 'ok' | 'warning' | 'error' | 'info';
 
+/**
+ * audience:
+ *   self  = 受付・事務スタッフ自身が画面上で確認できる項目
+ *   admin = 詳しい人 (.env / docker / port 開放) でないと直せない項目
+ *
+ * UX レビュー pass-2: setup を「あなたが確認すること」と「詳しい人に依頼
+ * すること」の 2 セクションに分け、自分で直せないものはまず管理者に依頼
+ * させる導線にする。
+ */
+type Audience = 'self' | 'admin';
+
 interface CheckResult {
   label: string;
   tone: Tone;
   statusLabel: string;
   message: string;
+  audience: Audience;
   nextActions?: string[];
   technical?: string;
+}
+
+async function checkLoginWorks(): Promise<CheckResult> {
+  // 「自分がログインできた」は requireAccount() を通って本ページが表示されている
+  // 時点で自明に true。受付スタッフへのフィードバックとしてここに出す。
+  return {
+    label: 'ログインできています',
+    tone: 'ok',
+    statusLabel: 'OK',
+    message: 'この画面が見えていれば、管理画面へのログインは正常です。',
+    audience: 'self',
+  };
 }
 
 async function checkAdminAccount(): Promise<CheckResult> {
@@ -38,6 +62,7 @@ async function checkAdminAccount(): Promise<CheckResult> {
       tone: 'error',
       statusLabel: '未作成',
       message: '管理者アカウントが 1 つもありません。Web にログインできません。',
+      audience: 'admin',
       nextActions: [
         '.env の BOOTSTRAP_ADMIN_PASSWORD を 8 文字以上で設定してください。',
         'docker compose restart web で再起動すると初期 admin が作成されます。',
@@ -49,6 +74,7 @@ async function checkAdminAccount(): Promise<CheckResult> {
     tone: 'ok',
     statusLabel: `${admins.length} 件`,
     message: '管理者アカウントが登録されています。',
+    audience: 'self',
     technical: admins.map((a) => `@${a.username}`).join(', '),
   };
 }
@@ -61,13 +87,17 @@ function checkAmi(): CheckResult {
       tone: 'ok',
       statusLabel: '接続中',
       message: 'PBX 本体と管理画面の連携は動いています。',
+      audience: 'self',
     };
   }
   return {
     label: '電話システム (Asterisk AMI)',
     tone: 'warning',
     statusLabel: '応答待ち',
-    message: '電話システムと管理画面の合言葉での接続を待っています。',
+    message:
+      '電話システムと管理画面の合言葉での接続を待っています。' +
+      ' 自分では直せないので、詳しい人に下の項目を確認してもらってください。',
+    audience: 'admin',
     nextActions: [
       'docker compose ps で asterisk container が Up になっているか確認',
       '.env の AMI_SECRET が manager.conf 側と一致しているか',
@@ -77,7 +107,12 @@ function checkAmi(): CheckResult {
   };
 }
 
-async function checkDir(label: string, dir: string, hint: string): Promise<CheckResult> {
+async function checkDir(
+  label: string,
+  dir: string,
+  hint: string,
+  audience: Audience = 'admin',
+): Promise<CheckResult> {
   try {
     const stat = await fs.stat(dir);
     if (!stat.isDirectory()) {
@@ -86,6 +121,7 @@ async function checkDir(label: string, dir: string, hint: string): Promise<Check
         tone: 'error',
         statusLabel: 'ファイルあり',
         message: `${dir} がディレクトリではありません。`,
+        audience: 'admin',
         nextActions: ['同名のファイルが存在しています。削除してから再起動してください。'],
       };
     }
@@ -94,6 +130,7 @@ async function checkDir(label: string, dir: string, hint: string): Promise<Check
       tone: 'ok',
       statusLabel: '存在',
       message: hint,
+      audience,
       technical: dir,
     };
   } catch {
@@ -102,6 +139,7 @@ async function checkDir(label: string, dir: string, hint: string): Promise<Check
       tone: 'warning',
       statusLabel: '未作成',
       message: `${dir} がまだ作成されていません。最初のイベント発生時に自動作成されます。`,
+      audience,
       technical: dir,
     };
   }
@@ -116,6 +154,7 @@ function checkCookieSecure(): CheckResult {
     message: flag
       ? 'HTTPS 経由でしか cookie が送信されません。HTTPS リバプロが必要です。'
       : 'LAN HTTP MVP 想定。HTTPS 公開する場合のみ .env で COOKIE_SECURE=1 を設定してください。',
+    audience: 'admin',
     technical: `COOKIE_SECURE=${process.env.COOKIE_SECURE ?? '(unset)'}`,
   };
 }
@@ -128,6 +167,7 @@ function checkCommandRoomLink(): CheckResult {
       tone: 'ok',
       statusLabel: '接続設定済み',
       message: '対応カードへの送信が有効です。',
+      audience: 'self',
     };
   }
   return {
@@ -135,7 +175,8 @@ function checkCommandRoomLink(): CheckResult {
     tone: 'info',
     statusLabel: '未設定',
     message:
-      'OpenPBX 単体でも内線・IVR・録音は動きます。command-room と連携する場合は以下を設定してください。',
+      'OpenPBX 単体でも内線・IVR・録音は動きます。command-room と連携する場合は詳しい人に依頼してください。',
+    audience: 'admin',
     nextActions: [
       `.env に ${missing.join(' / ')} を設定`,
       'docker compose restart web で push loop を起動',
@@ -150,6 +191,7 @@ function checkPorts(): CheckResult {
   return {
     label: 'SIP / RTP ポート',
     tone: 'info',
+    audience: 'admin' as Audience,
     statusLabel: '確認はホスト側で',
     message:
       'SIP signaling 5060/UDP+TCP と RTP media 10000-10020/UDP が開いている必要があります。',
@@ -171,26 +213,35 @@ const TONE_STYLES: Record<Tone, { badge: string; border: string }> = {
 export default async function SetupPage() {
   await requireAccount();
   const checks: CheckResult[] = await Promise.all([
+    checkLoginWorks(),
     checkAdminAccount(),
-    Promise.resolve(checkAmi()),
-    checkDir('録音フォルダ', RECORDINGS_DIR, '録音 wav はここに保存されます (ローカルのみ)。'),
-    checkDir('受信ボックス (inbox)', INBOX_DIR, 'Asterisk から外部統合層への引き渡し場所。'),
-    checkDir('送信ボックス (outbox-v1)', OUTBOX_DIR, 'command-room への送信待ちイベントが並びます。'),
     Promise.resolve(checkCommandRoomLink()),
+    Promise.resolve(checkAmi()),
+    checkDir('録音フォルダ', RECORDINGS_DIR, '録音 wav はここに保存されます (ローカルのみ)。', 'self'),
+    checkDir('受信ボックス (inbox)', INBOX_DIR, 'Asterisk から外部統合層への引き渡し場所。', 'admin'),
+    checkDir('送信ボックス (outbox-v1)', OUTBOX_DIR, 'command-room への送信待ちイベントが並びます。', 'admin'),
     Promise.resolve(checkCookieSecure()),
     Promise.resolve(checkPorts()),
   ]);
 
+  const selfChecks = checks.filter((c) => c.audience === 'self');
+  const adminChecks = checks.filter((c) => c.audience === 'admin');
+
   const totalErrors = checks.filter((c) => c.tone === 'error').length;
   const totalWarnings = checks.filter((c) => c.tone === 'warning').length;
+
+  // 「詳しい人に送る」用の診断テキスト。secret / token は含めない。
+  // クリップボード API は別 Client Component で対応 (本 PR はテキスト表示のみ)。
+  const diagnosticText = buildDiagnosticText(checks);
 
   return (
     <div className="space-y-6">
       <header className="space-y-2">
         <h2 className="text-lg font-semibold">はじめての設定 / 状態チェック</h2>
         <p className="text-xs text-slate-500">
-          OpenPBX が動くために必要な項目を上から順に確認します。Wi-Fi の設定をした
-          人が読めば分かる粒度を目指しています。
+          OpenPBX が動くために必要な項目をまとめています。
+          上半分はあなた自身が画面上で確認できる項目、下半分は詳しい人 (管理者) に
+          依頼が必要な項目です。
         </p>
         {totalErrors > 0 ? (
           <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900">
@@ -209,8 +260,57 @@ export default async function SetupPage() {
         )}
       </header>
 
-      <ol className="space-y-3" aria-label="セットアップチェック">
-        {checks.map((c, i) => {
+      <CheckList
+        title="あなたが確認すること"
+        description="この画面で見れば分かる項目です。"
+        items={selfChecks}
+      />
+
+      <CheckList
+        title="詳しい人に依頼すること"
+        description="docker / .env / ネットワークなど、サーバー設定が必要な項目です。下のテキストを管理者に送ってください。"
+        items={adminChecks}
+      />
+
+      <section className="rounded-md border border-slate-200 bg-slate-50 p-3 text-xs">
+        <p className="font-semibold text-slate-700">📋 詳しい人に送る診断情報</p>
+        <p className="mt-1 text-slate-600">
+          以下のテキストには接続キー / パスワード / 録音内容は含まれていません。
+          そのままコピーして管理者に送ってください。
+        </p>
+        <pre className="mt-2 max-h-64 overflow-auto rounded bg-white p-3 font-mono text-[11px] text-slate-800">
+{diagnosticText}
+        </pre>
+      </section>
+
+      <footer className="rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
+        <p className="font-semibold">📝 この画面のステータスは現在のコンテナ状態を反映します。</p>
+        <p className="mt-1">
+          再起動や設定変更の後はリロードしてください。
+        </p>
+      </footer>
+    </div>
+  );
+}
+
+function CheckList({
+  title,
+  description,
+  items,
+}: {
+  title: string;
+  description: string;
+  items: CheckResult[];
+}) {
+  if (items.length === 0) return null;
+  return (
+    <section className="space-y-2">
+      <header>
+        <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
+        <p className="text-xs text-slate-500">{description}</p>
+      </header>
+      <ol className="space-y-3" aria-label={title}>
+        {items.map((c, i) => {
           const s = TONE_STYLES[c.tone];
           return (
             <li
@@ -218,10 +318,10 @@ export default async function SetupPage() {
               className={`rounded-lg border ${s.border} bg-white p-4 space-y-2`}
             >
               <div className="flex items-center justify-between gap-3">
-                <h3 className="text-sm font-semibold">
+                <h4 className="text-sm font-semibold">
                   <span className="mr-2 text-slate-400">{i + 1}.</span>
                   {c.label}
-                </h3>
+                </h4>
                 <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${s.badge}`}>
                   {c.statusLabel}
                 </span>
@@ -247,14 +347,29 @@ export default async function SetupPage() {
           );
         })}
       </ol>
-
-      <footer className="rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
-        <p className="font-semibold">📝 この画面のステータスは現在のコンテナ状態を反映します。</p>
-        <p className="mt-1">
-          再起動や設定変更の後は「リロード」してください。スクリーンショットを管理者に
-          送ると、何が問題か共有しやすくなります。
-        </p>
-      </footer>
-    </div>
+    </section>
   );
+}
+
+// 「詳しい人に送る」用の診断テキスト。
+// 含めて良いもの: チェック結果のラベル / 状態 / 技術詳細 (env 名 / dir パス)。
+// 含めてはいけないもの: 接続キー / token / パスワード / 録音内容 / 電話番号。
+// 上の checkXxx 関数の technical 欄も「env 名」「dir パス」だけにしてあり、値は含めない設計。
+function buildDiagnosticText(checks: CheckResult[]): string {
+  const lines: string[] = [];
+  lines.push(`# OpenPBX 診断情報 (${new Date().toISOString()})`);
+  lines.push('');
+  for (const c of checks) {
+    lines.push(`## ${c.label}: ${c.statusLabel} (${c.tone})`);
+    lines.push(c.message);
+    if (c.nextActions && c.nextActions.length > 0) {
+      lines.push('次に確認すること:');
+      for (const a of c.nextActions) lines.push(`  - ${a}`);
+    }
+    if (c.technical) lines.push(`technical: ${c.technical}`);
+    lines.push('');
+  }
+  lines.push('---');
+  lines.push('* このテキストには接続キー / token / パスワードは含まれていません。');
+  return lines.join('\n');
 }
