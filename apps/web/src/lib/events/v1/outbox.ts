@@ -12,6 +12,23 @@ import type { OpenpbxEventV1 } from './schema';
 
 export type OutboxStatus = 'pending' | 'sent' | 'dead';
 
+// UI 表示用の日本語ラベル。CLI 用の英語ステータスは内部値として残し、
+// 画面では必ずこの label / tone を経由して出す。
+// - pending = 送信待ち (黄)。watcher が outbox に積み、push loop が拾うまで
+// - sent    = 送信済み (緑)。command-room の ack を受領
+// - dead    = 確認が必要 (赤)。contract 違反 / 400-422 等で再送不可
+export const OUTBOX_STATUS_LABEL: Record<OutboxStatus, string> = {
+  pending: '送信待ち',
+  sent: '送信済み',
+  dead: '確認が必要',
+};
+
+export const OUTBOX_STATUS_TONE: Record<OutboxStatus, 'warning' | 'ok' | 'error'> = {
+  pending: 'warning',
+  sent: 'ok',
+  dead: 'error',
+};
+
 export interface OutboxRow {
   eventId: string;
   status: OutboxStatus;
