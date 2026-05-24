@@ -3,6 +3,8 @@ import fs from 'node:fs/promises';
 import { listExtensions } from '@/lib/extensions';
 import { listDevices, amiClient, amiIsReady } from '@/lib/ami';
 import { requireAccount } from '@/lib/auth';
+import { countByStatus, OUTBOX_STATUS_LABEL } from '@/lib/events/v1/outbox';
+import { describeMissingEmitConfig } from '@/lib/events/v1/emit';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -41,6 +43,15 @@ export default async function OverviewPage() {
     countFiles(INBOX_DIR, /\.meta\.json$/),
     mtime(path.join(PJSIP_OUT_DIR, 'extensions.conf')),
   ]);
+  // command-room との連携状況 (送信待ち / 送信済み / 確認が必要)
+  // DB に event_outbox が未投入 (テスト環境等) でも例外で落ちないように try/catch
+  let outboxCounts: { pending: number; sent: number; dead: number } | null = null;
+  try {
+    outboxCounts = countByStatus();
+  } catch {
+    outboxCounts = null;
+  }
+  const missingPushEnv = describeMissingEmitConfig();
 
   return (
     <div className="space-y-6">
@@ -63,6 +74,48 @@ export default async function OverviewPage() {
         />
         <Card label="Inbox wav" value={fmtCount(inboxWavs)} hint="未受領 / 待機" />
         <Card label="Inbox meta" value={fmtCount(inboxMetas)} hint="event JSON" />
+      </section>
+
+      <section aria-label="command-room 連携" className="rounded-lg border border-slate-200 bg-white p-4 space-y-3">
+        <div className="flex items-baseline justify-between">
+          <h3 className="text-sm font-semibold text-slate-700">command-room 連携</h3>
+          {missingPushEnv.length > 0 && (
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">未設定</span>
+          )}
+        </div>
+        {outboxCounts ? (
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <StatusBadge tone="warning" label={OUTBOX_STATUS_LABEL.pending} value={outboxCounts.pending} />
+            <StatusBadge tone="ok" label={OUTBOX_STATUS_LABEL.sent} value={outboxCounts.sent} />
+            <StatusBadge tone="error" label={OUTBOX_STATUS_LABEL.dead} value={outboxCounts.dead} />
+          </div>
+        ) : (
+          <p className="text-xs text-slate-500">連携イベントの集計はまだ初期化されていません。</p>
+        )}
+        {missingPushEnv.length > 0 && (
+          <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
+            <p className="font-semibold">command-room への送信は未設定です。</p>
+            <p className="mt-1">
+              OpenPBX 単体でも内線・IVR・録音は動きます。
+              「届いた情報」として command-room に並べたい場合は、
+              <code className="rounded bg-white px-1">.env</code> に次を設定してください:
+              {' '}<code className="font-mono">{missingPushEnv.join(', ')}</code>
+            </p>
+          </div>
+        )}
+        {outboxCounts && outboxCounts.dead > 0 && (
+          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-900">
+            <p className="font-semibold">「確認が必要」のイベントが {outboxCounts.dead} 件あります。</p>
+            <p className="mt-1">
+              通常は contract 違反 (400/422) で再送されません。次に確認すること:
+            </p>
+            <ol className="mt-1 list-decimal pl-5 space-y-0.5">
+              <li>OpenPBX と command-room の event v1 スキーマ整合（バージョン不一致など）</li>
+              <li>EVENT_PUSH_URL の宛先が変わっていないか</li>
+              <li>device token が revoke されていないか</li>
+            </ol>
+          </div>
+        )}
       </section>
       <div className="text-xs text-slate-400">
         最終 pjsip 更新: {pjsipMtime ? new Date(pjsipMtime).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) : '-'}
@@ -155,4 +208,28 @@ function Card({
 function fmtCount(n: number): string {
   if (n < 0) return '-';
   return `${n}`;
+}
+
+// 「送信待ち / 送信済み / 確認が必要」など、色だけに頼らない状態バッジ。
+// アクセシビリティ要件: 色ではなく label + 数字も読めるようにする。
+function StatusBadge({
+  tone,
+  label,
+  value,
+}: {
+  tone: 'ok' | 'warning' | 'error';
+  label: string;
+  value: number;
+}) {
+  const classes = {
+    ok: 'border-emerald-200 bg-emerald-50 text-emerald-900',
+    warning: 'border-amber-200 bg-amber-50 text-amber-900',
+    error: 'border-red-200 bg-red-50 text-red-900',
+  }[tone];
+  return (
+    <div className={`rounded-md border px-2 py-2 ${classes}`}>
+      <div className="text-[10px] font-semibold">{label}</div>
+      <div className="mt-0.5 text-lg font-bold tabular-nums">{value}</div>
+    </div>
+  );
 }
