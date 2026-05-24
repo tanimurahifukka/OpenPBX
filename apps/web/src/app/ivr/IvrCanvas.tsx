@@ -56,7 +56,7 @@ export function IvrCanvas({ menuNumber, menuName, options, onRemoveAt, onAdd }: 
     if (typeof idx !== 'number') return;
     const opt = options[idx];
     const label = opt?.label ? `（${opt.label}）` : '';
-    if (window.confirm(`digit ${opt?.digit} ${label}を削除しますか？`)) {
+    if (window.confirm(`番号「${opt?.digit ?? ''}」${label}の分岐を削除しますか？`)) {
       onRemoveAt(idx);
     }
   };

@@ -58,9 +58,9 @@ export default async function OverviewPage() {
       <header>
         <h2 className="text-lg font-semibold">PBX 概要</h2>
         <p className="text-xs text-slate-500">
-          Asterisk ベース PBX の状態と設定への入り口。文字起こし・要約などの AI 処理は別システム
-          (sibling repo) が <code className="rounded bg-slate-100 px-1">data/inbox/</code>{' '}
-          を監視して処理します。
+          Asterisk ベース PBX の状態と設定への入り口。録音ファイルと通話イベントはローカルに保持し、
+          文字起こし・要約などの AI 処理は別システム (command-room + Hayabusa) が{' '}
+          <code className="rounded bg-slate-100 px-1">data/inbox/</code> を監視して処理します。
         </p>
       </header>
 
@@ -168,7 +168,8 @@ export default async function OverviewPage() {
       </section>
 
       <footer className="text-xs text-slate-400">
-        AI 統合層 (文字起こし / 要約 / チケット UI) は <code>../command-room-ai/</code> を参照。
+        文字起こし・要約は command-room と Hayabusa が担当します。OpenPBX は録音ファイルと通話イベントをローカルに保持し、
+        必要なメタ情報だけを連携します。文章から電話案内を作成する音声合成は VoiceBox (任意) を経由します。
       </footer>
     </div>
   );
