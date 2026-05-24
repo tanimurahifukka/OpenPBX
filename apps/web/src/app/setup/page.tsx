@@ -10,6 +10,7 @@ import fs from 'node:fs/promises';
 import { requireAccount, listAccounts } from '@/lib/auth';
 import { amiClient, amiIsReady } from '@/lib/ami';
 import { describeMissingEmitConfig } from '@/lib/events/v1/emit';
+import { CopyDiagnosticButton } from './_components/CopyDiagnosticButton';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -272,13 +273,16 @@ export default async function SetupPage() {
         items={adminChecks}
       />
 
-      <section className="rounded-md border border-slate-200 bg-slate-50 p-3 text-xs">
-        <p className="font-semibold text-slate-700">📋 詳しい人に送る診断情報</p>
-        <p className="mt-1 text-slate-600">
+      <section className="rounded-md border border-slate-200 bg-slate-50 p-3 text-xs space-y-2">
+        <div className="flex items-baseline justify-between gap-2">
+          <p className="font-semibold text-slate-700">📋 詳しい人に送る診断情報</p>
+          <CopyDiagnosticButton text={diagnosticText} />
+        </div>
+        <p className="text-slate-600">
           以下のテキストには接続キー / パスワード / 録音内容は含まれていません。
-          そのままコピーして管理者に送ってください。
+          上の「コピー」ボタンを押すか、テキストを手動で選択して管理者に送ってください。
         </p>
-        <pre className="mt-2 max-h-64 overflow-auto rounded bg-white p-3 font-mono text-[11px] text-slate-800">
+        <pre className="max-h-64 overflow-auto rounded bg-white p-3 font-mono text-[11px] text-slate-800">
 {diagnosticText}
         </pre>
       </section>
