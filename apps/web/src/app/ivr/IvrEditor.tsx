@@ -465,6 +465,7 @@ export function IvrEditor({ initial, upsertAction, deleteAction, guidances = [] 
                   guidances={guidances}
                   inputClass={`${fieldClass} font-mono`}
                   labelClass={labelClass}
+                  prefillName={suggestPrefillName(initial?.number, k)}
                 />
               ))}
               {guidances.length === 0 && (
@@ -493,10 +494,29 @@ function promptLabel(key: 'welcomePrompt' | 'menuPrompt' | 'invalidPrompt' | 'go
   return labels[key];
 }
 
+// Suggest a stable, predictable name to prefill the /guidances TTS form.
+// e.g. ivr 9000 menuPrompt -> "custom/ivr-9000-menu". Returns undefined when
+// the menu number isn't known yet (new IVR before save).
+function suggestPrefillName(
+  menuNumber: string | undefined | null,
+  key: 'welcomePrompt' | 'menuPrompt' | 'invalidPrompt' | 'goodbyePrompt',
+): string | undefined {
+  if (!menuNumber || !/^[A-Za-z0-9_-]+$/.test(menuNumber)) return undefined;
+  const suffix = {
+    welcomePrompt: 'welcome',
+    menuPrompt: 'menu',
+    invalidPrompt: 'invalid',
+    goodbyePrompt: 'goodbye',
+  }[key];
+  return `custom/ivr-${menuNumber}-${suffix}`;
+}
+
 interface GuidanceFieldProps {
   fieldName: string;
   label: string;
   defaultValue: string;
+  /** Suggested name to prefill on the /guidances TTS form. undefined to hide the link. */
+  prefillName?: string;
   guidances: GuidanceChoice[];
   inputClass: string;
   labelClass: string;
@@ -511,16 +531,31 @@ function GuidanceField({
   guidances,
   inputClass,
   labelClass,
+  prefillName,
 }: GuidanceFieldProps) {
   const known = guidances.some((g) => g.path === defaultValue);
   const [value, setValue] = useState<string>(defaultValue);
   const [manual, setManual] = useState<boolean>(!!defaultValue && !known);
 
+  // 「文章から作る」リンクは /guidances?prefillName=... を新規タブで開く。
+  // prefillName 未指定 (= IVR 番号未保存) のときは出さない。
+  const tts = prefillName ? (
+    <a
+      href={`/guidances?prefillName=${encodeURIComponent(prefillName)}`}
+      target="_blank"
+      rel="noreferrer"
+      className="shrink-0 text-[10px] font-semibold text-violet-700 hover:underline"
+      title="文章から電話案内を作成して登録します"
+    >
+      文章から作る
+    </a>
+  ) : null;
+
   if (guidances.length === 0 || manual) {
     return (
       <label className={labelClass}>
         {label}
-        <div className="mt-1 flex items-center gap-2">
+        <div className="mt-1 flex flex-wrap items-center gap-2">
           <input
             name={fieldName}
             value={value}
@@ -537,6 +572,7 @@ function GuidanceField({
               一覧から選ぶ
             </button>
           )}
+          {tts}
         </div>
       </label>
     );
@@ -545,7 +581,7 @@ function GuidanceField({
   return (
     <label className={labelClass}>
       {label}
-      <div className="mt-1 flex items-center gap-2">
+      <div className="mt-1 flex flex-wrap items-center gap-2">
         <select
           name={fieldName}
           value={value}
@@ -566,6 +602,7 @@ function GuidanceField({
         >
           手入力
         </button>
+        {tts}
       </div>
     </label>
   );
