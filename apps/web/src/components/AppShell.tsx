@@ -23,6 +23,7 @@ const NAV_GROUPS: NavGroup[] = [
     title: 'メイン',
     items: [
       { href: '/', label: '概要' },
+      { href: '/setup', label: 'セットアップ確認' },
       { href: '/devices', label: '端末状態' },
       { href: '/cdr', label: '履歴' },
       { href: '/recordings', label: '録音' },

@@ -587,45 +587,127 @@ interface ScriptPreviewProps {
   cidRouteCount: number;
 }
 
-// 保存前に「電話をかけた相手がどう案内されるか」を読み上げ調で確認するためのプレビュー。
+// 保存前に「電話をかけた相手がどう案内されるか」を視覚的に確認するためのプレビュー。
 // 実際の Asterisk dialplan reload を待たずにブラウザ側で見える。
+// UX-P2: 単なる台本ではなく「着信時のフロー」として時系列で並べる。
 function ScriptPreview({ options, afterHoursAction, afterHoursTarget, cidRouteCount }: ScriptPreviewProps) {
-  const lines = options
+  const digitLines = options
     .filter((o) => o.digit?.trim())
     .map((o) => {
       const action = ACTION_META[o.action]?.shortLabel ?? o.action;
-      const target = o.target?.trim() ? ` → ${o.target}` : '';
-      const label = o.label?.trim() ? `（${o.label}）` : '';
-      return `${o.digit} を押すと: ${action}${target}${label}`;
+      const target = o.target?.trim() ? `→ ${o.target}` : '';
+      const label = o.label?.trim() ? o.label : '';
+      return { digit: o.digit, action, target, label };
     });
 
   return (
     <section className="rounded-lg border border-slate-200 bg-white p-4">
-      <p className="text-xs font-bold text-slate-950">読み上げ台本プレビュー</p>
-      <p className="mt-1 text-[11px] text-slate-500">保存前に分岐の流れを確認できます。</p>
-      <ol className="mt-3 space-y-1 text-xs text-slate-700">
-        <li>📢 開始案内が流れます</li>
-        {lines.length === 0 ? (
-          <li className="text-slate-400">（分岐がまだありません）</li>
+      <p className="text-xs font-bold text-slate-950">着信の流れプレビュー</p>
+      <p className="mt-1 text-[11px] text-slate-500">
+        実際の電話が来たときの順序を保存前に確認できます。
+      </p>
+      <div className="mt-3 space-y-1.5 text-xs text-slate-700">
+        <FlowNode icon="📞" tone="neutral" title="外から電話が来る" />
+        <FlowArrow />
+        {cidRouteCount > 0 ? (
+          <>
+            <FlowNode
+              icon="🆔"
+              tone="info"
+              title={`発信元番号で分岐 (${cidRouteCount} 件)`}
+              subtitle="マッチしない番号は下のメニューへ"
+            />
+            <FlowArrow />
+          </>
+        ) : null}
+        {afterHoursAction ? (
+          <>
+            <FlowNode
+              icon="🌙"
+              tone="warning"
+              title="営業時間を判定"
+              subtitle={`時間外: ${ACTION_META[afterHoursAction as IvrAction]?.shortLabel ?? afterHoursAction}${afterHoursTarget ? ` → ${afterHoursTarget}` : ''}`}
+            />
+            <FlowArrow />
+          </>
+        ) : null}
+        <FlowNode icon="📢" tone="ok" title="開始案内・番号案内を流す" />
+        <FlowArrow />
+        {digitLines.length === 0 ? (
+          <FlowNode
+            icon="❓"
+            tone="warning"
+            title="まだ分岐がありません"
+            subtitle="番号を押されたときの動作を追加してください"
+          />
         ) : (
-          lines.map((l, i) => <li key={i}>📞 {l}</li>)
+          <>
+            <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+              <p className="text-[10px] font-semibold text-slate-600">押された番号で分岐:</p>
+              <ul className="mt-1 space-y-0.5">
+                {digitLines.map((d, i) => (
+                  <li key={i} className="flex items-baseline gap-2 text-[11px]">
+                    <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-600 font-mono text-[10px] font-bold text-white">
+                      {d.digit}
+                    </span>
+                    <span className="text-slate-700">
+                      {d.action} {d.target}
+                      {d.label && <span className="ml-1 text-slate-500">（{d.label}）</span>}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <FlowArrow />
+          </>
         )}
-        <li>⌛ 無入力時はもう一度案内します</li>
-        <li>❌ リトライ超過で終了案内 → 切断</li>
-        {afterHoursAction && (
-          <li className="rounded bg-amber-50 px-2 py-1 text-amber-800">
-            🌙 営業時間外:{' '}
-            {ACTION_META[afterHoursAction as IvrAction]?.shortLabel ?? afterHoursAction}
-            {afterHoursTarget ? ` → ${afterHoursTarget}` : ''}
-          </li>
-        )}
-        {cidRouteCount > 0 && (
-          <li className="rounded bg-sky-50 px-2 py-1 text-sky-800">
-            🆔 CallerID ルートが {cidRouteCount} 件設定されています（メニュー前に分岐）
-          </li>
-        )}
-      </ol>
+        <FlowNode
+          icon="⌛"
+          tone="neutral"
+          title="無入力 / 不正入力"
+          subtitle="リトライ後に終了案内 → 切断"
+        />
+      </div>
     </section>
+  );
+}
+
+const FLOW_TONE: Record<'ok' | 'info' | 'warning' | 'neutral', string> = {
+  ok: 'border-emerald-200 bg-emerald-50',
+  info: 'border-sky-200 bg-sky-50',
+  warning: 'border-amber-200 bg-amber-50',
+  neutral: 'border-slate-200 bg-white',
+};
+
+function FlowNode({
+  icon,
+  tone,
+  title,
+  subtitle,
+}: {
+  icon: string;
+  tone: 'ok' | 'info' | 'warning' | 'neutral';
+  title: string;
+  subtitle?: string;
+}) {
+  return (
+    <div className={`flex items-start gap-2 rounded-md border px-3 py-2 ${FLOW_TONE[tone]}`}>
+      <span aria-hidden className="shrink-0 text-base leading-tight">
+        {icon}
+      </span>
+      <div className="min-w-0">
+        <p className="text-xs font-semibold text-slate-900">{title}</p>
+        {subtitle && <p className="text-[10px] text-slate-600">{subtitle}</p>}
+      </div>
+    </div>
+  );
+}
+
+function FlowArrow() {
+  return (
+    <div aria-hidden className="flex justify-center text-slate-300">
+      ↓
+    </div>
   );
 }
 
