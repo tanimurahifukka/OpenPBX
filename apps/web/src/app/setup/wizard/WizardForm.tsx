@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { wizardCreateAccount } from './actions';
 
 type Step = 1 | 2 | 3;
 
@@ -33,19 +34,14 @@ export function WizardForm() {
     setError(null);
     setBusy(true);
     try {
-      const res = await fetch('/api/settings/wizard/account', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: username.trim(), password }),
-      });
-      const body = (await res.json()) as { ok?: boolean; error?: string };
-      if (!res.ok || !body.ok) {
-        setError(body.error ?? `エラー (HTTP ${res.status})`);
+      const result = await wizardCreateAccount(username.trim(), password);
+      if (!result.ok) {
+        setError(result.error ?? 'アカウント作成に失敗しました');
         return;
       }
       setStep(2);
     } catch (e) {
-      setError(`通信エラー: ${e instanceof Error ? e.message : String(e)}`);
+      setError(`エラー: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setBusy(false);
     }
