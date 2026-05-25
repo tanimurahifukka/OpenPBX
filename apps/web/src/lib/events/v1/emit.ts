@@ -26,11 +26,20 @@ export interface EmitConfig {
 }
 
 export function resolveEmitConfig(): EmitConfig | null {
-  const endpoint = process.env.EVENT_PUSH_URL;
-  const token = process.env.EVENT_PUSH_TOKEN;
-  const workspaceId = process.env.EVENT_PUSH_WORKSPACE_ID;
+  // Settings DB (Web UI で設定可能) → env 変数 の優先順で読む。
+  // env が入っていればそちらが勝つ (既存 docker-compose 運用と互換)。
+  let crConfig: import('../../../lib/settings').CommandRoomConfig | null = null;
+  try {
+    const { getCommandRoomConfig } = require('../../../lib/settings') as typeof import('../../../lib/settings');
+    crConfig = getCommandRoomConfig();
+  } catch {
+    // settings テーブルが無い極初期起動。env のみで判定。
+  }
+  const endpoint = crConfig?.pushUrl || process.env.EVENT_PUSH_URL || '';
+  const token = crConfig?.pushToken || process.env.EVENT_PUSH_TOKEN || '';
+  const workspaceId = crConfig?.workspaceId || process.env.EVENT_PUSH_WORKSPACE_ID || '';
   if (!endpoint || !token || !workspaceId) return null;
-  const sourceAccountId = process.env.EVENT_PUSH_SOURCE_ACCOUNT_ID || null;
+  const sourceAccountId = crConfig?.sourceAccountId || process.env.EVENT_PUSH_SOURCE_ACCOUNT_ID || null;
   const batchLimit = Number(process.env.EVENT_PUSH_BATCH ?? '20') || 20;
   const timeoutMs = Number(process.env.EVENT_PUSH_TIMEOUT_MS ?? '15000') || 15_000;
   return { endpoint, token, workspaceId, sourceAccountId, batchLimit, timeoutMs };
@@ -38,6 +47,12 @@ export function resolveEmitConfig(): EmitConfig | null {
 
 // disabled の理由を operator に分かりやすく返す。
 export function describeMissingEmitConfig(): string[] {
+  let crConfig: import('../../../lib/settings').CommandRoomConfig | null = null;
+  try {
+    const { getCommandRoomConfig } = require('../../../lib/settings') as typeof import('../../../lib/settings');
+    crConfig = getCommandRoomConfig();
+  } catch { /* settings not available yet */ }
+  if (crConfig?.configured) return [];
   const missing: string[] = [];
   if (!process.env.EVENT_PUSH_URL) missing.push('EVENT_PUSH_URL');
   if (!process.env.EVENT_PUSH_TOKEN) missing.push('EVENT_PUSH_TOKEN');

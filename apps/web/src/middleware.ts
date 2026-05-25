@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 // このチェックは UX のための早期リダイレクトに過ぎず、cookie の存在しか見ない。
 // 認証/認可の本体は各 Page (await requireAccount()) / API route (await requireApi())
 // / Server Action (await requireRole(...)) で必ず行うこと。
-const PUBLIC_PATHS = ['/login', '/api/login', '/api/logout', '/api/health'];
+const PUBLIC_PATHS = ['/login', '/api/login', '/api/logout', '/api/health', '/setup/wizard', '/api/settings/wizard'];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;

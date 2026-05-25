@@ -176,13 +176,45 @@ function checkCommandRoomLink(): CheckResult {
     tone: 'info',
     statusLabel: '未設定',
     message:
-      'OpenPBX 単体でも内線・IVR・録音は動きます。command-room と連携する場合は詳しい人に依頼してください。',
-    audience: 'admin',
+      'command-room に通話記録を送る場合は、接続設定ページから設定してください。' +
+      ' command-room の管理者に「接続コード」を発行してもらい、貼り付けるだけで完了します。' +
+      ' 設定しなくても OpenPBX 単体で内線・IVR・録音は使えます。',
+    audience: 'self',
     nextActions: [
-      `.env に ${missing.join(' / ')} を設定`,
-      'docker compose restart web で push loop を起動',
+      '接続設定ページ (/setup/connections) を開く',
+      'command-room 管理者に接続コードを発行してもらう',
+      '接続コードを貼り付けて「テスト接続」で確認',
     ],
-    technical: `missing env: ${missing.join(', ')}`,
+  };
+}
+
+function checkVoiceBox(): CheckResult {
+  let configured = false;
+  try {
+    const { getVoiceBoxConfig } = require('@/lib/settings') as typeof import('@/lib/settings');
+    configured = getVoiceBoxConfig().configured;
+  } catch { /* settings not available */ }
+  if (configured) {
+    return {
+      label: '音声作成 (VoiceBox)',
+      tone: 'ok',
+      statusLabel: '設定済み',
+      message: '/guidances で文章から電話案内音声を作成できます。',
+      audience: 'self',
+    };
+  }
+  return {
+    label: '音声作成 (VoiceBox)',
+    tone: 'info',
+    statusLabel: '未設定',
+    message:
+      '文章から電話案内音声を作りたい場合は、接続設定ページから VoiceBox を設定してください。' +
+      ' 設定しなくても wav アップロードで音声は登録できます。',
+    audience: 'self',
+    nextActions: [
+      '接続設定ページ (/setup/connections) を開く',
+      'VoiceBox サーバーの URL とトークンを入力 (自動検出もあります)',
+    ],
   };
 }
 
@@ -217,6 +249,7 @@ export default async function SetupPage() {
     checkLoginWorks(),
     checkAdminAccount(),
     Promise.resolve(checkCommandRoomLink()),
+    Promise.resolve(checkVoiceBox()),
     Promise.resolve(checkAmi()),
     checkDir('録音フォルダ', RECORDINGS_DIR, '録音 wav はここに保存されます (ローカルのみ)。', 'self'),
     checkDir('受信ボックス (inbox)', INBOX_DIR, 'Asterisk から外部統合層への引き渡し場所。', 'admin'),
@@ -260,6 +293,15 @@ export default async function SetupPage() {
           </div>
         )}
       </header>
+
+      <div className="flex flex-wrap gap-2">
+        <a
+          href="/setup/connections"
+          className="rounded bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
+        >
+          接続設定
+        </a>
+      </div>
 
       <CheckList
         title="あなたが確認すること"

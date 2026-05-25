@@ -141,6 +141,12 @@ CREATE TABLE IF NOT EXISTS ivr_caller_id_routes (
 CREATE INDEX IF NOT EXISTS idx_ivr_cid_routes_menu
   ON ivr_caller_id_routes(ivr_menu_id, position);
 
+CREATE TABLE IF NOT EXISTS app_settings (
+  key         TEXT PRIMARY KEY,
+  value       TEXT NOT NULL,
+  updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS guidances (
   name        TEXT PRIMARY KEY,
   text        TEXT,
