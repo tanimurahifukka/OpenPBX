@@ -5,7 +5,7 @@
 // (the wizard page also redirects away, so this is defense in depth).
 
 import { NextResponse } from 'next/server';
-import { createAccount, listAccounts } from '@/lib/auth';
+import { createAccount, createSession, listAccounts, requestMeta } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -39,12 +39,14 @@ export async function POST(req: Request) {
   }
 
   try {
-    createAccount({
+    const account = createAccount({
       username: body.username.trim(),
       displayName: undefined,
       password: body.password,
       role: 'admin',
     });
+    const meta = await requestMeta();
+    await createSession(account.id, meta);
     return NextResponse.json({ ok: true });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
