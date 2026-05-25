@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { loginAction } from '@/app/actions';
 import { getCurrentAccount } from '@/lib/auth';
+import { hasAnyAccounts } from '@/lib/settings';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,6 +11,9 @@ export default async function LoginPage({
   searchParams: Promise<{ next?: string; err?: string }>;
 }) {
   const sp = await searchParams;
+  // アカウントが 1 件も無い = 初回起動。ログインフォームを出しても
+  // 入力する認証情報が存在しないので、ウィザードに回す。
+  if (!hasAnyAccounts()) redirect('/setup/wizard');
   const account = await getCurrentAccount();
   if (account) redirect(sp.next ?? '/');
 
