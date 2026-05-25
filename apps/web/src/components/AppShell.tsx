@@ -7,6 +7,21 @@ import { FlashBanner } from '@/components/FlashBanner';
 
 type Role = 'user' | 'supervisor' | 'admin';
 
+type StatusLevel = 'ok' | 'warn' | 'off';
+
+export interface SystemStatus {
+  ami: StatusLevel;
+  commandRoom: StatusLevel;
+  voiceBox: StatusLevel;
+}
+
+// href → which status key to show a dot for
+const NAV_STATUS_MAP: Record<string, keyof SystemStatus> = {
+  '/devices': 'ami',
+  '/setup': 'commandRoom',
+  '/guidances': 'voiceBox',
+};
+
 interface NavItem {
   href: string;
   label: string;
@@ -82,9 +97,10 @@ interface MeProps {
 interface Props {
   me: MeProps;
   children: React.ReactNode;
+  systemStatus?: SystemStatus | null;
 }
 
-export function AppShell({ me, children }: Props) {
+export function AppShell({ me, children, systemStatus }: Props) {
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -103,7 +119,7 @@ export function AppShell({ me, children }: Props) {
   return (
     <div className="flex min-h-screen">
       <aside className="hidden w-60 shrink-0 border-r border-emerald-800 bg-emerald-700 lg:flex lg:flex-col">
-        <SidebarContent me={me} pathname={pathname} />
+        <SidebarContent me={me} pathname={pathname} systemStatus={systemStatus} />
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
@@ -144,6 +160,7 @@ export function AppShell({ me, children }: Props) {
             <SidebarContent
               me={me}
               pathname={pathname}
+              systemStatus={systemStatus}
               onNavigate={() => setDrawerOpen(false)}
               showCloseButton
               onClose={() => setDrawerOpen(false)}
@@ -158,12 +175,19 @@ export function AppShell({ me, children }: Props) {
 interface ContentProps {
   me: MeProps;
   pathname: string | null;
+  systemStatus?: SystemStatus | null;
   onNavigate?: () => void;
   showCloseButton?: boolean;
   onClose?: () => void;
 }
 
-function SidebarContent({ me, pathname, onNavigate, showCloseButton, onClose }: ContentProps) {
+const STATUS_DOT: Record<StatusLevel, string> = {
+  ok: 'bg-emerald-400',
+  warn: 'bg-amber-400',
+  off: 'bg-slate-500',
+};
+
+function SidebarContent({ me, pathname, systemStatus, onNavigate, showCloseButton, onClose }: ContentProps) {
   return (
     <>
       <div className="flex items-center justify-between border-b border-emerald-600 px-4 py-3 text-white">
@@ -198,22 +222,32 @@ function SidebarContent({ me, pathname, onNavigate, showCloseButton, onClose }: 
                 {g.title}
               </h3>
               <ul className="space-y-0.5">
-                {visibleItems.map((item) => (
-                  <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      onClick={onNavigate}
-                      aria-current={isActive(pathname, item.href) ? 'page' : undefined}
-                      className={`block rounded px-2 py-1.5 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-white/80 ${
-                        isActive(pathname, item.href)
-                          ? 'bg-emerald-800/70 font-semibold text-white'
-                          : 'text-emerald-50 hover:bg-emerald-600'
-                      }`}
-                    >
-                      {item.label}
-                    </Link>
-                  </li>
-                ))}
+                {visibleItems.map((item) => {
+                  const statusKey = NAV_STATUS_MAP[item.href];
+                  const level = statusKey && systemStatus ? systemStatus[statusKey] : undefined;
+                  return (
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        onClick={onNavigate}
+                        aria-current={isActive(pathname, item.href) ? 'page' : undefined}
+                        className={`flex items-center justify-between rounded px-2 py-1.5 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-white/80 ${
+                          isActive(pathname, item.href)
+                            ? 'bg-emerald-800/70 font-semibold text-white'
+                            : 'text-emerald-50 hover:bg-emerald-600'
+                        }`}
+                      >
+                        {item.label}
+                        {level && (
+                          <span
+                            className={`inline-block h-1.5 w-1.5 rounded-full ${STATUS_DOT[level]}`}
+                            aria-label={level === 'ok' ? '正常' : level === 'warn' ? '注意' : '未設定'}
+                          />
+                        )}
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           );

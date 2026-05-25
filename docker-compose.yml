@@ -93,6 +93,12 @@ services:
       EVENT_PUSH_SOURCE_ACCOUNT_ID: ${EVENT_PUSH_SOURCE_ACCOUNT_ID:-}
       EVENT_PUSH_BATCH: ${EVENT_PUSH_BATCH:-20}
       EVENT_PUSH_TIMEOUT_MS: ${EVENT_PUSH_TIMEOUT_MS:-15000}
+      # VoiceBox 連携 (optional): 文章から電話案内 wav を作る別アプリ。
+      # 未設定なら /guidances の「文章から電話案内を作る」セクションが無効化される。
+      # VoiceBox 本体は command-room-stack-voicebox repo を別 compose で起動する。
+      # macOS host で voicebox を動かす場合は VOICEBOX_URL=http://host.docker.internal:3921
+      VOICEBOX_URL: ${VOICEBOX_URL:-}
+      VOICEBOX_TOKEN: ${VOICEBOX_TOKEN:-}
     networks:
       - openpbx
 
