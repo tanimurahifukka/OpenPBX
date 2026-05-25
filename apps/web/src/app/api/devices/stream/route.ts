@@ -10,6 +10,10 @@ export async function GET() {
   const client = amiClient();
   const encoder = new TextEncoder();
 
+  // クリーンアップ用クロージャ変数。cancel() の this はソースオブジェクト
+  // 自体なので、controller にプロパティを付ける旧実装では到達できなかった。
+  let cleanup: (() => void) | null = null;
+
   const stream = new ReadableStream({
     start(controller) {
       const send = (event: string, data: unknown) => {
@@ -18,7 +22,7 @@ export async function GET() {
             encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`),
           );
         } catch {
-          /* closed */
+          /* stream already closed */
         }
       };
 
@@ -28,7 +32,7 @@ export async function GET() {
       const onChange = () => send('snapshot', { devices: listDevices(), connected: client.isConnected() });
       client.on('change', onChange);
 
-      // keep-alive (10秒ごとに ping)
+      // keep-alive ping (10秒ごと)
       const ping = setInterval(() => {
         try {
           controller.enqueue(encoder.encode(`: ping\n\n`));
@@ -37,15 +41,21 @@ export async function GET() {
         }
       }, 10_000);
 
-      // ストリームが閉じたらクリーンアップ
-      (controller as unknown as { _close?: () => void })._close = () => {
+      // 15秒ごとに full snapshot を送る。AMI change イベントを取りこぼしても
+      // UI が古い状態のまま固まらない。
+      const fullSync = setInterval(() => {
+        send('snapshot', { devices: listDevices(), connected: client.isConnected() });
+      }, 15_000);
+
+      cleanup = () => {
         clearInterval(ping);
+        clearInterval(fullSync);
         client.off('change', onChange);
       };
     },
     cancel() {
-      const c = this as unknown as { _close?: () => void };
-      c._close?.();
+      cleanup?.();
+      cleanup = null;
     },
   });
 

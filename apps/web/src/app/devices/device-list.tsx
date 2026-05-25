@@ -38,20 +38,46 @@ export function DeviceList({ initialDevices, initialConnected }: Props) {
   const [connected, setConnected] = useState<boolean>(initialConnected);
 
   useEffect(() => {
-    const es = new EventSource('/api/devices/stream');
-    es.addEventListener('snapshot', (ev) => {
-      try {
-        const payload = JSON.parse((ev as MessageEvent).data) as {
-          devices: DeviceInfo[];
-          connected: boolean;
-        };
-        setDevices(filter(payload.devices));
-        setConnected(payload.connected);
-      } catch {
-        /* ignore */
-      }
-    });
-    return () => es.close();
+    let es: EventSource | null = null;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let alive = true;
+
+    function connect() {
+      if (!alive) return;
+      es = new EventSource('/api/devices/stream');
+
+      es.addEventListener('snapshot', (ev) => {
+        try {
+          const payload = JSON.parse((ev as MessageEvent).data) as {
+            devices: DeviceInfo[];
+            connected: boolean;
+          };
+          setDevices(filter(payload.devices));
+          setConnected(payload.connected);
+        } catch {
+          /* ignore malformed data */
+        }
+      });
+
+      es.onerror = () => {
+        // EventSource auto-reconnects, but if it keeps failing we
+        // force a fresh connection after 5s to avoid the browser's
+        // exponential back-off growing too large.
+        es?.close();
+        es = null;
+        if (alive) {
+          retryTimer = setTimeout(connect, 5000);
+        }
+      };
+    }
+
+    connect();
+
+    return () => {
+      alive = false;
+      es?.close();
+      if (retryTimer) clearTimeout(retryTimer);
+    };
   }, []);
 
   return (

@@ -94,26 +94,30 @@ export default async function OverviewPage() {
         )}
         {missingPushEnv.length > 0 && (
           <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
-            <p className="font-semibold">command-room への送信は未設定です。</p>
-            <p className="mt-1">
-              OpenPBX 単体でも内線・IVR・録音は動きます。
-              「届いた情報」として command-room に並べたい場合は、
-              <code className="rounded bg-white px-1">.env</code> に次を設定してください:
-              {' '}<code className="font-mono">{missingPushEnv.join(', ')}</code>
+            <p>
+              通話記録を command-room の対応カードに送りたい場合は、接続設定から設定できます。
+              設定しなくても電話・IVR・録音はそのまま使えます。
             </p>
+            <a
+              href="/setup/connections"
+              className="mt-2 inline-block rounded bg-blue-600 px-3 py-1 text-xs font-semibold text-white hover:bg-blue-700"
+            >
+              接続設定を開く
+            </a>
           </div>
         )}
         {outboxCounts && outboxCounts.dead > 0 && (
           <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-900">
-            <p className="font-semibold">「確認が必要」のイベントが {outboxCounts.dead} 件あります。</p>
+            <p className="font-semibold">送信できなかったイベントが {outboxCounts.dead} 件あります。</p>
             <p className="mt-1">
-              通常は contract 違反 (400/422) で再送されません。次に確認すること:
+              command-room 側の接続が切れているか、設定が変わった可能性があります。
             </p>
-            <ol className="mt-1 list-decimal pl-5 space-y-0.5">
-              <li>OpenPBX と command-room の event v1 スキーマ整合（バージョン不一致など）</li>
-              <li>EVENT_PUSH_URL の宛先が変わっていないか</li>
-              <li>device token が revoke されていないか</li>
-            </ol>
+            <a
+              href="/setup/connections"
+              className="mt-2 inline-block rounded border border-red-300 px-2 py-0.5 text-xs text-red-800 hover:bg-red-100"
+            >
+              接続設定を確認する
+            </a>
           </div>
         )}
       </section>
