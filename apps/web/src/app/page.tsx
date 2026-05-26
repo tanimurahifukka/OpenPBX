@@ -6,6 +6,8 @@ import { requireAccount } from '@/lib/auth';
 import { countByStatus, OUTBOX_STATUS_LABEL } from '@/lib/events/v1/outbox';
 import { describeMissingEmitConfig } from '@/lib/events/v1/emit';
 import { StatusMessage } from '@/components/StatusMessage';
+import { getNetworkSettings } from '@/lib/network';
+import os from 'node:os';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -53,6 +55,9 @@ export default async function OverviewPage() {
     outboxCounts = null;
   }
   const missingPushEnv = describeMissingEmitConfig();
+
+  const netSettings = getNetworkSettings();
+  const hostIp = netSettings.externalIp || detectLanIp() || '(IP 未検出)';
 
   return (
     <div className="space-y-6">
@@ -118,21 +123,16 @@ export default async function OverviewPage() {
       <section className="rounded-lg border border-slate-200 bg-white p-4">
         <h3 className="mb-2 text-sm font-semibold text-slate-700">接続情報</h3>
         <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
-          <dt className="text-slate-500">SIP signaling</dt>
-          <dd className="font-mono">&lt;Mac IP&gt;:5060 (UDP/TCP)</dd>
-          <dt className="text-slate-500">RTP media</dt>
-          <dd className="font-mono">10000-10020/udp</dd>
+          <dt className="text-slate-500">SIP 接続先</dt>
+          <dd className="font-mono">{hostIp}:5060 (UDP/TCP)</dd>
+          <dt className="text-slate-500">RTP 音声ポート</dt>
+          <dd className="font-mono">{hostIp}:10000-10020 (UDP)</dd>
           <dt className="text-slate-500">特番</dt>
           <dd className="font-mono">9000 (IVR) / 9001 (営業窓口) / 9002 (折返し依頼)</dd>
-          <dt className="text-slate-500">Inbox</dt>
-          <dd className="font-mono">{INBOX_DIR}</dd>
-          <dt className="text-slate-500">録音</dt>
-          <dd className="font-mono">{RECORDINGS_DIR}</dd>
-          <dt className="text-slate-500">pjsip.d</dt>
-          <dd className="font-mono">{PJSIP_OUT_DIR}</dd>
         </dl>
         <p className="mt-2 text-xs text-slate-500">
-          Mac の IP は <code className="rounded bg-slate-100 px-1">ifconfig | grep &quot;inet &quot; | grep -v 127</code> で確認できます。
+          Groundwire などの SIP 電話アプリに上の IP とポートを入力してください。
+          {!netSettings.externalIp && ' (IP は自動検出です。/network で固定できます)'}
         </p>
       </section>
 
@@ -197,6 +197,17 @@ function Card({
   ) : (
     inner
   );
+}
+
+function detectLanIp(): string | null {
+  const nets = os.networkInterfaces();
+  for (const addrs of Object.values(nets)) {
+    if (!addrs) continue;
+    for (const a of addrs) {
+      if (a.family === 'IPv4' && !a.internal) return a.address;
+    }
+  }
+  return null;
 }
 
 function fmtCount(n: number): string {
