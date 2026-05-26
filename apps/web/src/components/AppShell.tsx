@@ -118,12 +118,12 @@ export function AppShell({ me, children, systemStatus }: Props) {
 
   return (
     <div className="flex min-h-screen">
-      <aside className="hidden w-60 shrink-0 border-r border-white/10 bg-brand-700 lg:flex lg:flex-col">
+      <aside className="hidden w-60 shrink-0 border-r border-white/10 bg-brand lg:flex lg:flex-col">
         <SidebarContent me={me} pathname={pathname} systemStatus={systemStatus} />
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-white/10 bg-brand-700 px-4 py-3 text-white lg:hidden">
+        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-white/10 bg-brand px-4 py-3 text-white lg:hidden">
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
@@ -156,7 +156,7 @@ export function AppShell({ me, children, systemStatus }: Props) {
             onClick={() => setDrawerOpen(false)}
             className="absolute inset-0 bg-slate-900/50"
           />
-          <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-brand-700 shadow-xl">
+          <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-brand shadow-xl">
             <SidebarContent
               me={me}
               pathname={pathname}
