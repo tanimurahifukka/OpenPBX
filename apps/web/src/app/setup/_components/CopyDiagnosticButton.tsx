@@ -46,12 +46,12 @@ export function CopyDiagnosticButton({ text }: Props) {
         📋 診断情報をコピー
       </button>
       {status === 'copied' && (
-        <span role="status" className="text-xs font-semibold text-brand-600">
+        <span role="status" className="text-xs font-semibold text-primary-600">
           ✓ コピーしました
         </span>
       )}
       {status === 'error' && (
-        <span role="alert" className="text-xs font-semibold text-melon-500">
+        <span role="alert" className="text-xs font-semibold text-danger">
           コピーに失敗しました。下の文章を手動でコピーしてください。
         </span>
       )}

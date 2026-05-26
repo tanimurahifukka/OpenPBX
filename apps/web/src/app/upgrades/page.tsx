@@ -59,7 +59,7 @@ export default async function UpgradesPage() {
             />
           </label>
           <div className="flex items-end">
-            <button type="submit" className="rounded bg-brand px-3 py-1.5 text-xs font-semibold text-white">
+            <button type="submit" className="rounded bg-primary px-3 py-1.5 text-xs font-semibold text-white">
               予約
             </button>
           </div>
@@ -97,7 +97,7 @@ export default async function UpgradesPage() {
                       <input type="hidden" name="id" value={j.id} />
                       <ConfirmButton
                         confirmText={`予約 #${j.id} を削除しますか？`}
-                        className="rounded border border-melon-300 bg-white px-2 py-0.5 text-xs text-melon-500"
+                        className="rounded border border-danger bg-white px-2 py-0.5 text-xs text-danger"
                       >
                         削除
                       </ConfirmButton>

@@ -135,8 +135,8 @@ export function ConnectionsForm({ initialCr, initialVb }: Props) {
 
         {crSaved && (
           <div className="mt-3 flex items-center gap-2 text-xs">
-            <span className="inline-block h-2 w-2 rounded-full bg-brand-500" />
-            <span className="font-semibold text-brand-700">設定済み</span>
+            <span className="inline-block h-2 w-2 rounded-full bg-primary-500" />
+            <span className="font-semibold text-primary-700">設定済み</span>
             {initialCr.pushUrl && (
               <span className="text-slate-500">({initialCr.pushUrl})</span>
             )}
@@ -170,13 +170,13 @@ export function ConnectionsForm({ initialCr, initialVb }: Props) {
             type="button"
             onClick={handleCrSave}
             disabled={crBusy || !crCode.trim()}
-            className="rounded bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-500 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {crBusy ? '保存中…' : '接続コードを保存'}
           </button>
         </div>
 
-        {crError && <p className="mt-2 text-xs text-melon-500">{crError}</p>}
+        {crError && <p className="mt-2 text-xs text-danger">{crError}</p>}
         {crTest && <TestBadge result={crTest} />}
       </section>
 
@@ -190,8 +190,8 @@ export function ConnectionsForm({ initialCr, initialVb }: Props) {
 
         {vbSaved && (
           <div className="mt-3 flex items-center gap-2 text-xs">
-            <span className="inline-block h-2 w-2 rounded-full bg-brand-500" />
-            <span className="font-semibold text-brand-700">設定済み</span>
+            <span className="inline-block h-2 w-2 rounded-full bg-primary-500" />
+            <span className="font-semibold text-primary-700">設定済み</span>
             {initialVb.url && <span className="text-slate-500">({initialVb.url})</span>}
             <button
               type="button"
@@ -240,13 +240,13 @@ export function ConnectionsForm({ initialCr, initialVb }: Props) {
             type="button"
             onClick={handleVbSave}
             disabled={vbBusy || !vbUrl.trim()}
-            className="rounded bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-500 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {vbBusy ? '保存中…' : '保存'}
           </button>
         </div>
 
-        {vbError && <p className="mt-2 text-xs text-melon-500">{vbError}</p>}
+        {vbError && <p className="mt-2 text-xs text-danger">{vbError}</p>}
         {vbTest && <TestBadge result={vbTest} />}
       </section>
     </div>
@@ -258,8 +258,8 @@ function TestBadge({ result }: { result: { ok: boolean; message: string } }) {
     <p
       className={`mt-2 rounded px-2 py-1 text-xs ${
         result.ok
-          ? 'border border-brand-200 bg-brand-50 text-brand-700'
-          : 'border border-melon-200 bg-melon-50 text-melon-500'
+          ? 'border border-primary-200 bg-primary-50 text-primary-700'
+          : 'border border-danger bg-danger-light text-danger'
       }`}
     >
       {result.ok ? '✓ ' : '✗ '}

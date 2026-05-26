@@ -4,12 +4,26 @@
 
 :root {
   color-scheme: light;
+  --color-text: #1a1a1a;
+  --color-text-secondary: #595959;
+  --color-text-tertiary: #8c8c8c;
+  --color-border: #d9d9d9;
+  --color-bg: #ffffff;
+  --color-bg-secondary: #fafafa;
+  --color-primary: #4897d8;
 }
 
 html,
 body {
   margin: 0;
   padding: 0;
-  background-color: #f8fafc;
-  color: #1e293b;
+  background-color: var(--color-bg-secondary);
+  color: var(--color-text);
+  font-feature-settings: 'palt';
+}
+
+/* デジタル庁準拠: focus-visible で keyboard focus のみリングを出す */
+*:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }

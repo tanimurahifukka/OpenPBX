@@ -36,7 +36,7 @@ export default async function ConcurrencyPage() {
             return (
               <div
                 key={s.minute}
-                className="w-1 bg-brand-500"
+                className="w-1 bg-primary-500"
                 title={`${formatJst(s.minute)} : ${s.channels}`}
                 style={{ height: `${h}%` }}
               />

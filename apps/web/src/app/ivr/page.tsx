@@ -29,7 +29,7 @@ export default async function IvrPage() {
                 ←
               </span>
               <div className="min-w-0">
-                <p className="text-xs font-bold text-brand-600">IVR / 自動音声応答</p>
+                <p className="text-xs font-bold text-primary-600">IVR / 自動音声応答</p>
                 <h2 className="truncate text-2xl font-bold tracking-tight text-slate-950">
                   ルール設定
                 </h2>
@@ -45,7 +45,7 @@ export default async function IvrPage() {
               />
               <button
                 type="button"
-                className="flex h-10 w-12 items-center justify-center rounded-md bg-brand text-sm font-bold text-white shadow-sm transition hover:bg-brand-500"
+                className="flex h-10 w-12 items-center justify-center rounded-md bg-primary text-sm font-bold text-white shadow-sm transition hover:bg-primary-500"
                 aria-label="発信テスト"
               >
                 ☎
@@ -55,7 +55,7 @@ export default async function IvrPage() {
 
           <nav className="mt-5 flex gap-2 overflow-x-auto border-b border-slate-200 pb-0" aria-label="IVRルール">
             {menus.length === 0 ? (
-              <span className="border-b-2 border-brand px-2 pb-3 text-xs font-bold text-brand-600">
+              <span className="border-b-2 border-primary px-2 pb-3 text-xs font-bold text-primary-600">
                 ルール①
               </span>
             ) : (
@@ -65,7 +65,7 @@ export default async function IvrPage() {
                   href={`#ivr-${menu.number}`}
                   className={`shrink-0 border-b-2 px-2 pb-3 text-xs font-bold transition ${
                     index === 0
-                      ? 'border-brand text-brand-600'
+                      ? 'border-primary text-primary-600'
                       : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700'
                   }`}
                 >
@@ -95,7 +95,7 @@ export default async function IvrPage() {
       <section className="space-y-3">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="text-xs font-bold text-brand-600">登録済みルール</p>
+            <p className="text-xs font-bold text-primary-600">登録済みルール</p>
             <h3 className="text-lg font-bold text-slate-950">着信時のガイダンスと分岐</h3>
           </div>
           <p className="text-xs text-slate-500">
@@ -125,7 +125,7 @@ export default async function IvrPage() {
 
       <section id="ivr-new" className="scroll-mt-6 space-y-3">
         <div>
-          <p className="text-xs font-bold text-brand-600">新規ルール</p>
+          <p className="text-xs font-bold text-primary-600">新規ルール</p>
           <h3 className="text-lg font-bold text-slate-950">新しいIVRを追加</h3>
         </div>
         <IvrEditor upsertAction={upsertIvrAction} guidances={guidances} />

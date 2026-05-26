@@ -20,11 +20,11 @@ interface StatusMessageProps {
 }
 
 const TONE_STYLES: Record<StatusTone, { border: string; bg: string; text: string; icon: string }> = {
-  ok:    { border: 'border-brand-200',      bg: 'bg-brand-50',      text: 'text-brand-700',      icon: '✓' },
-  warn:  { border: 'border-banana-200',     bg: 'bg-banana-50',     text: 'text-banana-500',     icon: '!' },
-  error: { border: 'border-melon-200',      bg: 'bg-melon-50',      text: 'text-melon-600',      icon: '✗' },
-  info:  { border: 'border-slate-200',      bg: 'bg-slate-50',      text: 'text-slate-700',      icon: 'i' },
-  off:   { border: 'border-slate-200',      bg: 'bg-slate-50',      text: 'text-slate-500',      icon: '○' },
+  ok:    { border: 'border-success/30',  bg: 'bg-success-light', text: 'text-success-dark', icon: '✓' },
+  warn:  { border: 'border-warning/30',  bg: 'bg-warning-light', text: 'text-warning-dark', icon: '!' },
+  error: { border: 'border-danger/30',   bg: 'bg-danger-light',  text: 'text-danger-dark',  icon: '✗' },
+  info:  { border: 'border-gray-200',    bg: 'bg-gray-50',       text: 'text-gray-700',     icon: 'i' },
+  off:   { border: 'border-gray-200',    bg: 'bg-gray-50',       text: 'text-gray-500',     icon: '○' },
 };
 
 export function StatusMessage({ tone, title, description, action, showAdminEscalation }: StatusMessageProps) {
@@ -46,7 +46,7 @@ export function StatusMessage({ tone, title, description, action, showAdminEscal
           {action && (
             <Link
               href={action.href}
-              className="rounded bg-brand px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-brand-500"
+              className="rounded bg-primary px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-primary-500"
             >
               {action.label}
             </Link>
@@ -54,7 +54,7 @@ export function StatusMessage({ tone, title, description, action, showAdminEscal
           {showAdminEscalation && (
             <Link
               href="/setup#diagnostics"
-              className="rounded border border-slate-300 px-2.5 py-1 text-[11px] text-slate-700 hover:bg-white"
+              className="rounded border border-gray-300 px-2.5 py-1 text-[11px] text-gray-700 hover:bg-gray-100"
             >
               管理者に診断情報を送る
             </Link>

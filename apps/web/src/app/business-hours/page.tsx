@@ -51,8 +51,8 @@ export default async function BusinessHoursPage() {
       <section className="rounded-lg border border-slate-200 bg-white p-4">
         <h3 className="mb-3 text-sm font-semibold text-slate-700">時間帯ルール ({rules.length})</h3>
         <details className="mb-3" open>
-          <summary className="cursor-pointer text-xs text-brand-600">新規追加</summary>
-          <div className="mt-2 rounded-lg border border-brand-100 bg-brand-50/50 p-3">
+          <summary className="cursor-pointer text-xs text-primary-600">新規追加</summary>
+          <div className="mt-2 rounded-lg border border-primary-100 bg-primary-50/50 p-3">
             <TimeRuleForm action={createTimeRuleAction} submitLabel="追加" />
           </div>
         </details>
@@ -91,7 +91,7 @@ export default async function BusinessHoursPage() {
             className="rounded border border-slate-300 px-2 py-1 text-sm"
             aria-label="名前"
           />
-          <button type="submit" className="rounded bg-brand px-3 py-1 text-xs font-semibold text-white">
+          <button type="submit" className="rounded bg-primary px-3 py-1 text-xs font-semibold text-white">
             追加 / 更新
           </button>
         </form>
@@ -107,7 +107,7 @@ export default async function BusinessHoursPage() {
                   <input type="hidden" name="date" value={h.date} />
                   <ConfirmButton
                     confirmText={`祝日 ${h.date} (${h.name}) を削除しますか？`}
-                    className="rounded border border-melon-300 bg-white px-2 py-0.5 text-xs text-melon-500 hover:bg-melon-50"
+                    className="rounded border border-danger bg-white px-2 py-0.5 text-xs text-danger hover:bg-danger-light"
                   >
                     削除
                   </ConfirmButton>
@@ -177,7 +177,7 @@ function TimeRuleForm({ action, initial, submitLabel, deleteAction }: RuleFormPr
           {isEdit && <input type="hidden" name="id" value={initial!.id} />}
           <button
             type="submit"
-            className="rounded-md border border-slate-300 bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-500"
+            className="rounded-md border border-slate-300 bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary-500"
           >
             {submitLabel}
           </button>
@@ -185,7 +185,7 @@ function TimeRuleForm({ action, initial, submitLabel, deleteAction }: RuleFormPr
             <ConfirmButton
               confirmText={`「${initial!.name}」を削除しますか？`}
               formAction={deleteAction}
-              className="rounded-md border border-melon-300 bg-white px-3 py-1.5 text-xs font-semibold text-melon-500 hover:bg-melon-50"
+              className="rounded-md border border-danger bg-white px-3 py-1.5 text-xs font-semibold text-danger hover:bg-danger-light"
             >
               削除
             </ConfirmButton>
@@ -200,7 +200,7 @@ function TimeRuleForm({ action, initial, submitLabel, deleteAction }: RuleFormPr
             return (
               <label
                 key={code}
-                className={`flex items-center gap-1 text-sm ${isWeekend && code === 'sat' ? 'text-brand-600' : ''} ${code === 'sun' ? 'text-melon-500' : ''}`}
+                className={`flex items-center gap-1 text-sm ${isWeekend && code === 'sat' ? 'text-primary-600' : ''} ${code === 'sun' ? 'text-danger' : ''}`}
               >
                 <input
                   type="checkbox"

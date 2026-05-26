@@ -180,7 +180,7 @@ export function Softphone({ extensions }: SoftphoneProps) {
           <button
             onClick={connect}
             type="button"
-            className="rounded bg-brand px-3 py-1.5 text-xs font-semibold text-white"
+            className="rounded bg-primary px-3 py-1.5 text-xs font-semibold text-white"
           >
             登録
           </button>
@@ -201,13 +201,13 @@ export function Softphone({ extensions }: SoftphoneProps) {
           placeholder="発信先 (例: 1002)"
           className="rounded border border-slate-300 px-2 py-1 font-mono text-sm"
         />
-        <button onClick={call} type="button" className="rounded bg-brand px-3 py-1.5 text-xs font-semibold text-white">
+        <button onClick={call} type="button" className="rounded bg-primary px-3 py-1.5 text-xs font-semibold text-white">
           発信
         </button>
-        <button onClick={answer} type="button" className="rounded bg-brand px-3 py-1.5 text-xs font-semibold text-white">
+        <button onClick={answer} type="button" className="rounded bg-primary px-3 py-1.5 text-xs font-semibold text-white">
           応答
         </button>
-        <button onClick={hangup} type="button" className="rounded bg-melon px-3 py-1.5 text-xs font-semibold text-white">
+        <button onClick={hangup} type="button" className="rounded bg-danger px-3 py-1.5 text-xs font-semibold text-white">
           切る
         </button>
       </div>

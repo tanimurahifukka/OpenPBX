@@ -69,7 +69,7 @@ export default async function AuditPage() {
                   <td className="px-2 py-1 font-mono">{l.username}</td>
                   <td className="px-2 py-1">
                     <span
-                      className={`rounded-full border px-2 py-0.5 ${l.success ? 'border-brand-300 bg-brand-50 text-brand-700' : 'border-melon-300 bg-melon-50 text-melon-600'}`}
+                      className={`rounded-full border px-2 py-0.5 ${l.success ? 'border-primary-300 bg-primary-50 text-primary-700' : 'border-danger bg-danger-light text-danger-dark'}`}
                     >
                       {l.success ? '成功' : '失敗'}
                     </span>

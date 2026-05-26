@@ -52,7 +52,7 @@ export default async function BillingPage() {
             placeholder="接続料"
             className="rounded border border-slate-300 px-2 py-1 font-mono text-sm"
           />
-          <button type="submit" className="rounded bg-brand px-3 py-1 text-xs font-semibold text-white">
+          <button type="submit" className="rounded bg-primary px-3 py-1 text-xs font-semibold text-white">
             追加/更新
           </button>
         </form>
@@ -70,7 +70,7 @@ export default async function BillingPage() {
                   <input type="hidden" name="prefix" value={r.prefix} />
                   <ConfirmButton
                     confirmText={`レート ${r.prefix} を削除しますか？`}
-                    className="rounded border border-melon-300 bg-white px-2 py-0.5 text-xs text-melon-500 hover:bg-melon-50"
+                    className="rounded border border-danger bg-white px-2 py-0.5 text-xs text-danger hover:bg-danger-light"
                   >
                     削除
                   </ConfirmButton>

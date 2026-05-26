@@ -52,7 +52,7 @@ export default async function AccountsPage() {
             <option value="supervisor">supervisor</option>
             <option value="admin">admin</option>
           </select>
-          <button type="submit" className="rounded bg-brand px-3 py-1.5 text-xs font-semibold text-white">
+          <button type="submit" className="rounded bg-primary px-3 py-1.5 text-xs font-semibold text-white">
             追加
           </button>
         </form>
@@ -76,14 +76,14 @@ function AccountRow({ account: a, isMe }: { account: Account; isMe: boolean }) {
       <div className="flex items-baseline gap-3 text-sm">
         <span className="font-mono">{a.username}</span>
         {isMe && (
-          <span className="rounded-full border border-brand-300 bg-brand-50 px-2 py-0.5 text-[10px] font-semibold text-brand-700">
+          <span className="rounded-full border border-primary-300 bg-primary-50 px-2 py-0.5 text-[10px] font-semibold text-primary-700">
             あなた
           </span>
         )}
         <span className="text-slate-600">{a.displayName ?? '-'}</span>
         <span className="text-xs text-slate-500">{a.role}</span>
         {a.totpEnabled && (
-          <span className="rounded-full border border-brand-300 bg-brand-50 px-2 py-0.5 text-[10px] text-brand-700">
+          <span className="rounded-full border border-primary-300 bg-primary-50 px-2 py-0.5 text-[10px] text-primary-700">
             2FA
           </span>
         )}
@@ -138,7 +138,7 @@ function AccountRow({ account: a, isMe }: { account: Account; isMe: boolean }) {
           <input type="hidden" name="id" value={a.id} />
           <ConfirmButton
             confirmText={`アカウント "${a.username}" を削除しますか？`}
-            className="rounded border border-melon-300 bg-white px-2 py-1 text-xs text-melon-500 hover:bg-melon-50"
+            className="rounded border border-danger bg-white px-2 py-1 text-xs text-danger hover:bg-danger-light"
           >
             削除
           </ConfirmButton>

@@ -64,12 +64,12 @@ const ACTION_META: Record<
 > = {
   goto_extension: {
     shortLabel: '電話転送',
-    badgeClass: 'bg-brand-50 text-brand-600 ring-brand-200',
+    badgeClass: 'bg-primary-50 text-primary-600 ring-primary-200',
     helper: '内線番号へつなぎます',
   },
   goto_ringgroup: {
     shortLabel: 'グループ',
-    badgeClass: 'bg-banana-50 text-banana-500 ring-amber-200',
+    badgeClass: 'bg-warning-light text-warning-dark ring-amber-200',
     helper: '複数端末を呼び出します',
   },
   goto_ivr: {
@@ -98,9 +98,9 @@ const CID_ACTION_OPTIONS: { value: CallerIdRouteAction; label: string }[] = [
 ];
 
 const fieldClass =
-  'mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-100 disabled:bg-slate-100 disabled:text-slate-400';
+  'mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100 disabled:bg-slate-100 disabled:text-slate-400';
 const compactFieldClass =
-  'h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-100 disabled:bg-slate-100 disabled:text-slate-400';
+  'h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100 disabled:bg-slate-100 disabled:text-slate-400';
 const labelClass = 'text-[11px] font-semibold text-slate-500';
 
 interface CidRouteDraft {
@@ -236,11 +236,11 @@ export function IvrEditor({ initial, upsertAction, deleteAction, guidances = [] 
     <form action={upsertAction} id={formId} className="overflow-hidden rounded-lg border border-slate-200 bg-[#f4f6f3] shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand text-sm font-bold text-white">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-white">
             {isEdit ? '✓' : '+'}
           </span>
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold text-brand-600">
+            <p className="text-[11px] font-semibold text-primary-600">
               {isEdit ? 'ルール適用' : '新規ルール'}
             </p>
             <h3 className="truncate text-sm font-bold text-slate-950">{displayName}</h3>
@@ -257,7 +257,7 @@ export function IvrEditor({ initial, upsertAction, deleteAction, guidances = [] 
             <ConfirmButton
               confirmText={`IVR ${initial!.number} を削除しますか？`}
               formAction={deleteAction}
-              className="rounded-md border border-melon-200 bg-white px-3 py-2 text-xs font-bold text-melon-500 transition hover:bg-melon-50 focus:outline-none focus:ring-2 focus:ring-red-100"
+              className="rounded-md border border-danger bg-white px-3 py-2 text-xs font-bold text-danger transition hover:bg-danger-light focus:outline-none focus:ring-2 focus:ring-red-100"
             >
               削除
             </ConfirmButton>
@@ -335,7 +335,7 @@ export function IvrEditor({ initial, upsertAction, deleteAction, guidances = [] 
                       onClick={() => setView('cards')}
                       className={`rounded px-3 py-1.5 font-bold transition ${
                         view === 'cards'
-                          ? 'bg-brand text-white shadow-sm'
+                          ? 'bg-primary text-white shadow-sm'
                           : 'text-slate-600 hover:bg-white'
                       }`}
                     >
@@ -348,7 +348,7 @@ export function IvrEditor({ initial, upsertAction, deleteAction, guidances = [] 
                       onClick={() => setView('canvas')}
                       className={`rounded px-3 py-1.5 font-bold transition ${
                         view === 'canvas'
-                          ? 'bg-brand text-white shadow-sm'
+                          ? 'bg-primary text-white shadow-sm'
                           : 'text-slate-600 hover:bg-white'
                       }`}
                     >
@@ -360,7 +360,7 @@ export function IvrEditor({ initial, upsertAction, deleteAction, guidances = [] 
                   <button
                     type="button"
                     onClick={addRow}
-                    className="rounded-md border border-brand-200 bg-brand-50 px-3 py-2 text-xs font-bold text-brand-600 transition hover:bg-brand-100"
+                    className="rounded-md border border-primary-200 bg-primary-50 px-3 py-2 text-xs font-bold text-primary-600 transition hover:bg-primary-100"
                   >
                     + 分岐
                   </button>
@@ -439,7 +439,7 @@ export function IvrEditor({ initial, upsertAction, deleteAction, guidances = [] 
               <SummaryMetric label="別IVR" value={summary.nestedCount} />
               <SummaryMetric label="CallerID" value={cidRoutes.length} />
             </dl>
-            <div className="mt-3 rounded-md bg-brand-50 px-3 py-2 text-[11px] font-semibold text-brand-700">
+            <div className="mt-3 rounded-md bg-primary-50 px-3 py-2 text-[11px] font-semibold text-primary-700">
               {afterHoursAction ? '営業時間外ルートあり' : '営業時間内外で同じルール'}
             </div>
           </section>
@@ -544,7 +544,7 @@ function GuidanceField({
       href={`/guidances?prefillName=${encodeURIComponent(prefillName)}`}
       target="_blank"
       rel="noreferrer"
-      className="shrink-0 text-[10px] font-semibold text-canteloupe-500 hover:underline"
+      className="shrink-0 text-[10px] font-semibold text-accent-dark hover:underline"
       title="文章から電話案内を作成して登録します"
     >
       文章から作る
@@ -567,7 +567,7 @@ function GuidanceField({
             <button
               type="button"
               onClick={() => setManual(false)}
-              className="shrink-0 text-[10px] font-semibold text-brand-600 hover:underline"
+              className="shrink-0 text-[10px] font-semibold text-primary-600 hover:underline"
             >
               一覧から選ぶ
             </button>
@@ -684,7 +684,7 @@ function ScriptPreview({ options, afterHoursAction, afterHoursTarget, cidRouteCo
               <ul className="mt-1 space-y-0.5">
                 {digitLines.map((d, i) => (
                   <li key={i} className="flex items-baseline gap-2 text-[11px]">
-                    <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-brand font-mono text-[10px] font-bold text-white">
+                    <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary font-mono text-[10px] font-bold text-white">
                       {d.digit}
                     </span>
                     <span className="text-slate-700">
@@ -710,9 +710,9 @@ function ScriptPreview({ options, afterHoursAction, afterHoursTarget, cidRouteCo
 }
 
 const FLOW_TONE: Record<'ok' | 'info' | 'warning' | 'neutral', string> = {
-  ok: 'border-brand-200 bg-brand-50',
+  ok: 'border-primary-200 bg-primary-50',
   info: 'border-sky-200 bg-sky-50',
-  warning: 'border-banana-200 bg-banana-50',
+  warning: 'border-warning bg-warning-light',
   neutral: 'border-slate-200 bg-white',
 };
 
@@ -770,7 +770,7 @@ function AfterHoursPanel({
           <p className="text-xs font-bold text-slate-950">営業時間外</p>
           <p className="text-[11px] text-slate-500">閉店時だけ別ルートへ切り替えます。</p>
         </div>
-        <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${action ? 'bg-brand-50 text-brand-600' : 'bg-slate-100 text-slate-500'}`}>
+        <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${action ? 'bg-primary-50 text-primary-600' : 'bg-slate-100 text-slate-500'}`}>
           {action ? 'ON' : 'OFF'}
         </span>
       </div>
@@ -826,7 +826,7 @@ function CallerIdRoutesPanel({ routes, onAdd, onChange, onRemove }: CallerIdRout
         <button
           type="button"
           onClick={onAdd}
-          className="rounded-md border border-brand-200 bg-brand-50 px-3 py-2 text-xs font-bold text-brand-600 transition hover:bg-brand-100"
+          className="rounded-md border border-primary-200 bg-primary-50 px-3 py-2 text-xs font-bold text-primary-600 transition hover:bg-primary-100"
         >
           + 追加
         </button>
@@ -873,7 +873,7 @@ function CallerIdRoutesPanel({ routes, onAdd, onChange, onRemove }: CallerIdRout
                     type="button"
                     onClick={() => onRemove(r.uid)}
                     aria-label="CallerID ルートを削除"
-                    className="flex h-10 w-8 items-center justify-center rounded-md text-lg font-bold text-slate-400 transition hover:bg-melon-50 hover:text-melon"
+                    className="flex h-10 w-8 items-center justify-center rounded-md text-lg font-bold text-slate-400 transition hover:bg-danger-light hover:text-danger"
                   >
                     ×
                   </button>
@@ -916,7 +916,7 @@ function SortableOptionCard({ index, option, onChange, onRemove }: CardProps) {
     <li
       ref={setNodeRef}
       style={style}
-      className="group rounded-lg border border-slate-200 bg-white shadow-sm transition hover:border-brand-200 hover:shadow-md"
+      className="group rounded-lg border border-slate-200 bg-white shadow-sm transition hover:border-primary-200 hover:shadow-md"
     >
       <div className="grid gap-3 p-3 md:grid-cols-[34px_72px_minmax(180px,1fr)_150px_150px_40px] md:items-center">
         <button
@@ -938,7 +938,7 @@ function SortableOptionCard({ index, option, onChange, onRemove }: CardProps) {
             inputMode="numeric"
             pattern="[0-9*#]"
             placeholder="1"
-            className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-slate-50 px-2 text-center font-mono text-base font-bold text-slate-950 outline-none transition focus:border-brand-400 focus:bg-white focus:ring-2 focus:ring-brand-100"
+            className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-slate-50 px-2 text-center font-mono text-base font-bold text-slate-950 outline-none transition focus:border-primary-400 focus:bg-white focus:ring-2 focus:ring-primary-100"
           />
         </label>
 
@@ -984,7 +984,7 @@ function SortableOptionCard({ index, option, onChange, onRemove }: CardProps) {
           type="button"
           onClick={onRemove}
           aria-label="この分岐を削除"
-          className="flex h-10 w-10 items-center justify-center rounded-md text-lg font-bold text-slate-400 transition hover:bg-melon-50 hover:text-melon"
+          className="flex h-10 w-10 items-center justify-center rounded-md text-lg font-bold text-slate-400 transition hover:bg-danger-light hover:text-danger"
         >
           ×
         </button>

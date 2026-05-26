@@ -59,7 +59,7 @@ export default async function NetworkPage() {
           ここには 100.x.x.x が直接出ません。`tailscale ip -4` で取得した値を下記に入力してください。
         </p>
         {tailscaleCandidates.length > 0 && (
-          <p className="mt-2 text-xs text-brand-600">
+          <p className="mt-2 text-xs text-primary-600">
             Tailscale 候補 (100.64.0.0/10):{' '}
             {tailscaleCandidates.map((i) => i.address).join(', ')}
           </p>
@@ -103,7 +103,7 @@ export default async function NetworkPage() {
           </p>
           <button
             type="submit"
-            className="rounded bg-brand px-3 py-1.5 text-xs font-semibold text-white"
+            className="rounded bg-primary px-3 py-1.5 text-xs font-semibold text-white"
           >
             保存 + Asterisk reload
           </button>

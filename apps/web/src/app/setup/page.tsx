@@ -237,9 +237,9 @@ function checkPorts(): CheckResult {
 }
 
 const TONE_STYLES: Record<Tone, { badge: string; border: string }> = {
-  ok: { badge: 'bg-brand-100 text-brand-800', border: 'border-brand-200' },
-  warning: { badge: 'bg-banana-100 text-banana-500', border: 'border-banana-200' },
-  error: { badge: 'bg-melon-100 text-melon-600', border: 'border-melon-200' },
+  ok: { badge: 'bg-primary-100 text-primary-800', border: 'border-primary-200' },
+  warning: { badge: 'bg-warning-light text-warning-dark', border: 'border-warning' },
+  error: { badge: 'bg-danger-light text-danger-dark', border: 'border-danger' },
   info: { badge: 'bg-slate-100 text-slate-900', border: 'border-slate-200' },
 };
 
@@ -278,17 +278,17 @@ export default async function SetupPage() {
           依頼が必要な項目です。
         </p>
         {totalErrors > 0 ? (
-          <div className="rounded-md border border-melon-200 bg-melon-50 px-3 py-2 text-sm text-melon-600">
+          <div className="rounded-md border border-danger bg-danger-light px-3 py-2 text-sm text-danger-dark">
             <span className="font-semibold">⚠️ 解消が必要な項目が {totalErrors} 件あります。</span>{' '}
             下のリストで「次に確認すること」を見てください。
           </div>
         ) : totalWarnings > 0 ? (
-          <div className="rounded-md border border-banana-200 bg-banana-50 px-3 py-2 text-sm text-banana-500">
+          <div className="rounded-md border border-warning bg-warning-light px-3 py-2 text-sm text-warning-dark">
             <span className="font-semibold">注意: 確認が必要な項目が {totalWarnings} 件あります。</span>{' '}
             電話は動きますが、設定を見直すと安定します。
           </div>
         ) : (
-          <div className="rounded-md border border-brand-200 bg-brand-50 px-3 py-2 text-sm text-brand-800">
+          <div className="rounded-md border border-primary-200 bg-primary-50 px-3 py-2 text-sm text-primary-800">
             <span className="font-semibold">✅ 主要な項目はすべて OK です。</span>
           </div>
         )}
@@ -297,7 +297,7 @@ export default async function SetupPage() {
       <div className="flex flex-wrap gap-2">
         <a
           href="/setup/connections"
-          className="rounded bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-500"
+          className="rounded bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary-500"
         >
           接続設定
         </a>

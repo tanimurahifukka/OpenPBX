@@ -55,10 +55,10 @@ export default async function LoginPage({
             className="mt-1 w-full rounded border border-slate-300 px-2 py-1 font-mono text-sm"
           />
         </label>
-        {sp.err && <p className="text-xs text-melon">ログインに失敗しました。</p>}
+        {sp.err && <p className="text-xs text-danger">ログインに失敗しました。</p>}
         <button
           type="submit"
-          className="w-full rounded-md bg-brand px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-500"
+          className="w-full rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-white hover:bg-primary-500"
         >
           ログイン
         </button>

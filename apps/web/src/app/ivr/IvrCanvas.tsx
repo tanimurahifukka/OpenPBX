@@ -80,7 +80,7 @@ export function IvrCanvas({ menuNumber, menuName, options, onRemoveAt, onAdd }: 
         <button
           type="button"
           onClick={onAdd}
-          className="absolute right-2 top-2 z-10 rounded-md border border-brand-200 bg-white px-3 py-2 text-xs font-bold text-brand-600 shadow-sm hover:bg-brand-50"
+          className="absolute right-2 top-2 z-10 rounded-md border border-primary-200 bg-white px-3 py-2 text-xs font-bold text-primary-600 shadow-sm hover:bg-primary-50"
         >
           + 分岐を追加
         </button>
@@ -101,7 +101,7 @@ function buildGraph(
       data: {
         label: (
           <div className="px-1 text-center">
-            <div className="text-xs font-semibold text-brand-700">IVR {menuNumber}</div>
+            <div className="text-xs font-semibold text-primary-700">IVR {menuNumber}</div>
             {menuName && <div className="text-[10px] text-slate-500">{menuName}</div>}
           </div>
         ),

@@ -71,7 +71,7 @@ export default async function CdrPage({ searchParams }: { searchParams: Promise<
         />
         <button
           type="submit"
-          className="rounded bg-brand px-3 py-1 text-xs font-semibold text-white hover:bg-brand-500"
+          className="rounded bg-primary px-3 py-1 text-xs font-semibold text-white hover:bg-primary-500"
         >
           検索
         </button>
@@ -109,13 +109,13 @@ export default async function CdrPage({ searchParams }: { searchParams: Promise<
                     <span
                       className={`rounded-full border px-2 py-0.5 text-xs ${
                         r.disposition === 'ANSWERED'
-                          ? 'border-brand-300 bg-brand-50 text-brand-700'
+                          ? 'border-primary-300 bg-primary-50 text-primary-700'
                           : r.disposition === 'NO ANSWER'
-                            ? 'border-amber-300 bg-banana-50 text-banana-500'
+                            ? 'border-amber-300 bg-warning-light text-warning-dark'
                             : r.disposition === 'BUSY'
                               ? 'border-orange-300 bg-orange-50 text-orange-800'
                               : r.disposition === 'FAILED'
-                                ? 'border-melon-300 bg-melon-50 text-melon-600'
+                                ? 'border-danger bg-danger-light text-danger-dark'
                                 : 'border-slate-300 bg-slate-50 text-slate-700'
                       }`}
                     >

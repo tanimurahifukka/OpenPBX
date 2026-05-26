@@ -133,7 +133,7 @@ export function WizardForm() {
           {[1, 2, 3].map((s) => (
             <div
               key={s}
-              className={`h-1 flex-1 rounded-full ${s <= step ? 'bg-brand' : 'bg-slate-200'}`}
+              className={`h-1 flex-1 rounded-full ${s <= step ? 'bg-primary' : 'bg-slate-200'}`}
             />
           ))}
         </div>
@@ -179,7 +179,7 @@ export function WizardForm() {
             type="button"
             onClick={handleStep1}
             disabled={busy || !username.trim() || !password}
-            className="w-full rounded bg-brand py-2 text-sm font-semibold text-white hover:bg-brand-500 disabled:opacity-50"
+            className="w-full rounded bg-primary py-2 text-sm font-semibold text-white hover:bg-primary-500 disabled:opacity-50"
           >
             {busy ? '作成中…' : '次へ'}
           </button>
@@ -215,7 +215,7 @@ export function WizardForm() {
             type="button"
             onClick={handleStep2}
             disabled={busy}
-            className="w-full rounded bg-brand py-2 text-sm font-semibold text-white hover:bg-brand-500 disabled:opacity-50"
+            className="w-full rounded bg-primary py-2 text-sm font-semibold text-white hover:bg-primary-500 disabled:opacity-50"
           >
             {busy ? '保存中…' : '次へ'}
           </button>
@@ -273,7 +273,7 @@ export function WizardForm() {
             type="button"
             onClick={handleStep3}
             disabled={busy}
-            className="w-full rounded bg-brand py-2 text-sm font-semibold text-white hover:bg-brand-500 disabled:opacity-50"
+            className="w-full rounded bg-primary py-2 text-sm font-semibold text-white hover:bg-primary-500 disabled:opacity-50"
           >
             {busy ? '保存中…' : 'セットアップ完了'}
           </button>
@@ -281,7 +281,7 @@ export function WizardForm() {
       )}
 
       {error && (
-        <p className="rounded border border-melon-200 bg-melon-50 p-2 text-xs text-melon-500">{error}</p>
+        <p className="rounded border border-danger bg-danger-light p-2 text-xs text-danger">{error}</p>
       )}
     </div>
   );

@@ -117,7 +117,7 @@ function ExtensionForm({ action, initial, submitLabel, deleteAction }: Extension
       <div className="flex items-end gap-2">
         <button
           type="submit"
-          className="rounded-md border border-slate-300 bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="rounded-md border border-slate-300 bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           {submitLabel}
         </button>
@@ -125,7 +125,7 @@ function ExtensionForm({ action, initial, submitLabel, deleteAction }: Extension
           <ConfirmButton
             confirmText={`内線 ${initial.number} を削除しますか？`}
             formAction={deleteAction}
-            className="rounded-md border border-melon-300 bg-white px-3 py-1.5 text-xs font-semibold text-melon-500 hover:bg-melon-50 focus:outline-none focus:ring-2 focus:ring-red-500"
+            className="rounded-md border border-danger bg-white px-3 py-1.5 text-xs font-semibold text-danger hover:bg-danger-light focus:outline-none focus:ring-2 focus:ring-red-500"
             aria-label={`内線 ${initial.number} を削除`}
           >
             削除

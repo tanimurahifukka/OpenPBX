@@ -15,7 +15,6 @@ export interface SystemStatus {
   voiceBox: StatusLevel;
 }
 
-// href → which status key to show a dot for
 const NAV_STATUS_MAP: Record<string, keyof SystemStatus> = {
   '/devices': 'ami',
   '/setup': 'commandRoom',
@@ -47,9 +46,7 @@ const NAV_GROUPS: NavGroup[] = [
   },
   {
     title: '通話',
-    items: [
-      { href: '/softphone', label: 'ソフトフォン' },
-    ],
+    items: [{ href: '/softphone', label: 'ソフトフォン' }],
   },
   {
     title: '設定',
@@ -118,17 +115,19 @@ export function AppShell({ me, children, systemStatus }: Props) {
 
   return (
     <div className="flex min-h-screen">
-      <aside className="hidden w-60 shrink-0 border-r border-white/20 bg-[#4897D8] lg:flex lg:flex-col">
+      {/* Desktop sidebar — 白背景、primary はアクセントのみ */}
+      <aside className="hidden w-60 shrink-0 border-r border-gray-200 bg-white lg:flex lg:flex-col">
         <SidebarContent me={me} pathname={pathname} systemStatus={systemStatus} />
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-white/20 bg-[#4897D8] px-4 py-3 text-white lg:hidden">
+        {/* Mobile header — primary 色のバー */}
+        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-primary-500 bg-primary px-4 py-3 text-white lg:hidden">
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
             aria-label="メニューを開く"
-            className="rounded p-1 text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/80"
+            className="rounded p-1 text-white hover:bg-primary-500 focus-visible:ring-2 focus-visible:ring-white"
           >
             <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
               <line x1="3" y1="6" x2="21" y2="6" />
@@ -148,15 +147,16 @@ export function AppShell({ me, children, systemStatus }: Props) {
         <main className="mx-auto w-full max-w-6xl px-4 py-6">{children}</main>
       </div>
 
+      {/* Mobile drawer */}
       {drawerOpen && (
         <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true">
           <button
             type="button"
             aria-label="メニューを閉じる"
             onClick={() => setDrawerOpen(false)}
-            className="absolute inset-0 bg-slate-900/50"
+            className="absolute inset-0 bg-black/30"
           />
-          <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-[#4897D8] shadow-xl">
+          <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col border-r border-gray-200 bg-white shadow-xl">
             <SidebarContent
               me={me}
               pathname={pathname}
@@ -182,19 +182,20 @@ interface ContentProps {
 }
 
 const STATUS_DOT: Record<StatusLevel, string> = {
-  ok: 'bg-green-400',
-  warn: 'bg-banana',
-  off: 'bg-white/30',
+  ok: 'bg-success',
+  warn: 'bg-warning',
+  off: 'bg-gray-300',
 };
 
 function SidebarContent({ me, pathname, systemStatus, onNavigate, showCloseButton, onClose }: ContentProps) {
   return (
     <>
-      <div className="flex items-center justify-between border-b border-white/25 px-4 py-3 text-white">
+      {/* ロゴバー — primary 色のアクセント帯 */}
+      <div className="flex items-center justify-between border-b border-gray-200 bg-primary px-4 py-3">
         <Link
           href="/"
           onClick={onNavigate}
-          className="rounded text-lg font-semibold tracking-tight hover:underline focus:outline-none focus:ring-2 focus:ring-white/80"
+          className="rounded text-lg font-semibold tracking-tight text-white hover:underline"
         >
           OpenPBX
         </Link>
@@ -203,7 +204,7 @@ function SidebarContent({ me, pathname, systemStatus, onNavigate, showCloseButto
             type="button"
             onClick={onClose}
             aria-label="メニューを閉じる"
-            className="rounded p-1 text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/80"
+            className="rounded p-1 text-white hover:bg-primary-500"
           >
             <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
               <line x1="18" y1="6" x2="6" y2="18" />
@@ -212,29 +213,32 @@ function SidebarContent({ me, pathname, systemStatus, onNavigate, showCloseButto
           </button>
         )}
       </div>
+
+      {/* ナビ本体 — 白背景に dark text */}
       <nav aria-label="メインナビゲーション" className="flex-1 overflow-y-auto px-2 py-3">
         {NAV_GROUPS.map((g) => {
           const visibleItems = g.items.filter((i) => canSee(i.minRole, me.role));
           if (visibleItems.length === 0) return null;
           return (
             <div key={g.title} className="mb-3">
-              <h3 className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-white/80">
+              <h3 className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
                 {g.title}
               </h3>
               <ul className="space-y-0.5">
                 {visibleItems.map((item) => {
                   const statusKey = NAV_STATUS_MAP[item.href];
                   const level = statusKey && systemStatus ? systemStatus[statusKey] : undefined;
+                  const active = isActive(pathname, item.href);
                   return (
                     <li key={item.href}>
                       <Link
                         href={item.href}
                         onClick={onNavigate}
-                        aria-current={isActive(pathname, item.href) ? 'page' : undefined}
-                        className={`flex items-center justify-between rounded px-2 py-1.5 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-white/80 ${
-                          isActive(pathname, item.href)
-                            ? 'bg-white/30 font-semibold text-white'
-                            : 'text-white hover:bg-white/20 hover:text-white'
+                        aria-current={active ? 'page' : undefined}
+                        className={`flex items-center justify-between rounded px-2 py-1.5 text-sm transition-colors ${
+                          active
+                            ? 'border-l-2 border-primary bg-primary-50 pl-[6px] font-semibold text-primary-600'
+                            : 'text-gray-700 hover:bg-gray-100'
                         }`}
                       >
                         {item.label}
@@ -253,13 +257,16 @@ function SidebarContent({ me, pathname, systemStatus, onNavigate, showCloseButto
           );
         })}
       </nav>
-      <div className="border-t border-white/20 px-2 py-2">
+
+      <div className="border-t border-gray-200 px-2 py-2">
         <Link
           href="/me"
           onClick={onNavigate}
           aria-current={pathname === '/me' ? 'page' : undefined}
-          className={`block rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-white/80 ${
-            pathname === '/me' ? 'bg-white/30 font-semibold text-white' : 'text-white hover:bg-white/20 hover:text-white'
+          className={`block rounded px-2 py-1.5 text-sm ${
+            pathname === '/me'
+              ? 'border-l-2 border-primary bg-primary-50 pl-[6px] font-semibold text-primary-600'
+              : 'text-gray-700 hover:bg-gray-100'
           }`}
         >
           👤 {me.username}

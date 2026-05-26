@@ -67,14 +67,14 @@ function TrunkForm({ action, initial, submitLabel, deleteAction }: Props) {
       <input name="secret" type="password" defaultValue={initial?.secret ?? ''} placeholder="secret"
         className="rounded border border-slate-300 px-2 py-1 font-mono text-sm" />
       <div className="flex items-center gap-2">
-        <button type="submit" className="rounded bg-brand px-3 py-1.5 text-xs font-semibold text-white">
+        <button type="submit" className="rounded bg-primary px-3 py-1.5 text-xs font-semibold text-white">
           {submitLabel}
         </button>
         {isEdit && deleteAction && (
           <ConfirmButton
             confirmText={`trunk ${initial.name} を削除しますか？`}
             formAction={deleteAction}
-            className="rounded border border-melon-300 bg-white px-2 py-1 text-xs text-melon-500"
+            className="rounded border border-danger bg-white px-2 py-1 text-xs text-danger"
           >
             削除
           </ConfirmButton>
