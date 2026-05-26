@@ -116,13 +116,13 @@ export function AppShell({ me, children, systemStatus }: Props) {
   return (
     <div className="flex min-h-screen">
       {/* Desktop sidebar — 白背景、primary はアクセントのみ */}
-      <aside className="hidden w-60 shrink-0 border-r border-gray-200 bg-white lg:flex lg:flex-col">
+      <aside className="hidden w-60 shrink-0 bg-[#2F496E] lg:flex lg:flex-col">
         <SidebarContent me={me} pathname={pathname} systemStatus={systemStatus} />
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Mobile header — primary 色のバー */}
-        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-primary-500 bg-primary px-4 py-3 text-white lg:hidden">
+        <header className="sticky top-0 z-20 flex items-center gap-3 bg-[#2F496E] px-4 py-3 text-white lg:hidden">
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
@@ -156,7 +156,7 @@ export function AppShell({ me, children, systemStatus }: Props) {
             onClick={() => setDrawerOpen(false)}
             className="absolute inset-0 bg-black/30"
           />
-          <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col border-r border-gray-200 bg-white shadow-xl">
+          <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-[#2F496E] shadow-xl">
             <SidebarContent
               me={me}
               pathname={pathname}
@@ -182,16 +182,16 @@ interface ContentProps {
 }
 
 const STATUS_DOT: Record<StatusLevel, string> = {
-  ok: 'bg-success',
-  warn: 'bg-warning',
-  off: 'bg-gray-300',
+  ok: 'bg-green-400',
+  warn: 'bg-yellow-400',
+  off: 'bg-white/25',
 };
 
 function SidebarContent({ me, pathname, systemStatus, onNavigate, showCloseButton, onClose }: ContentProps) {
   return (
     <>
       {/* ロゴバー — primary 色のアクセント帯 */}
-      <div className="flex items-center justify-between border-b border-gray-200 bg-primary px-4 py-3">
+      <div className="flex items-center justify-between border-b border-white/15 px-4 py-3">
         <Link
           href="/"
           onClick={onNavigate}
@@ -204,7 +204,7 @@ function SidebarContent({ me, pathname, systemStatus, onNavigate, showCloseButto
             type="button"
             onClick={onClose}
             aria-label="メニューを閉じる"
-            className="rounded p-1 text-white hover:bg-primary-500"
+            className="rounded p-1 text-white/80 hover:text-white hover:bg-white/10"
           >
             <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
               <line x1="18" y1="6" x2="6" y2="18" />
@@ -221,7 +221,7 @@ function SidebarContent({ me, pathname, systemStatus, onNavigate, showCloseButto
           if (visibleItems.length === 0) return null;
           return (
             <div key={g.title} className="mb-3">
-              <h3 className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+              <h3 className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-white/40">
                 {g.title}
               </h3>
               <ul className="space-y-0.5">
@@ -237,8 +237,8 @@ function SidebarContent({ me, pathname, systemStatus, onNavigate, showCloseButto
                         aria-current={active ? 'page' : undefined}
                         className={`flex items-center justify-between rounded px-2 py-1.5 text-sm transition-colors ${
                           active
-                            ? 'border-l-2 border-primary bg-primary-50 pl-[6px] font-semibold text-primary-600'
-                            : 'text-gray-700 hover:bg-gray-100'
+                            ? 'bg-white/15 font-semibold text-white'
+                            : 'text-white/70 hover:bg-white/10 hover:text-white'
                         }`}
                       >
                         {item.label}
@@ -258,15 +258,15 @@ function SidebarContent({ me, pathname, systemStatus, onNavigate, showCloseButto
         })}
       </nav>
 
-      <div className="border-t border-gray-200 px-2 py-2">
+      <div className="border-t border-white/15 px-2 py-2">
         <Link
           href="/me"
           onClick={onNavigate}
           aria-current={pathname === '/me' ? 'page' : undefined}
           className={`block rounded px-2 py-1.5 text-sm ${
             pathname === '/me'
-              ? 'border-l-2 border-primary bg-primary-50 pl-[6px] font-semibold text-primary-600'
-              : 'text-gray-700 hover:bg-gray-100'
+              ? 'bg-white/15 font-semibold text-white'
+              : 'text-white/70 hover:bg-white/10 hover:text-white'
           }`}
         >
           👤 {me.username}
