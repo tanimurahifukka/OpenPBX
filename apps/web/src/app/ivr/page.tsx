@@ -23,33 +23,19 @@ export default async function IvrPage() {
     <div className="space-y-5 pb-10">
       <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-200 bg-white px-4 py-4 sm:px-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex min-w-0 items-center gap-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-2xl text-slate-700">
-                ←
-              </span>
-              <div className="min-w-0">
-                <p className="text-xs font-bold text-primary-600">IVR / 自動音声応答</p>
-                <h2 className="truncate text-2xl font-bold tracking-tight text-slate-950">
-                  ルール設定
-                </h2>
-              </div>
-            </div>
-
-            <div className="flex w-full items-center gap-2 lg:w-[340px]">
-              <input
-                aria-label="発信テスト番号"
-                value="09012345678"
-                readOnly
-                className="h-10 min-w-0 flex-1 rounded-md border border-slate-200 bg-slate-50 px-3 font-mono text-sm text-slate-500"
-              />
-              <button
-                type="button"
-                className="flex h-10 w-12 items-center justify-center rounded-md bg-primary text-sm font-bold text-white shadow-sm transition hover:bg-primary-500"
-                aria-label="発信テスト"
-              >
-                ☎
-              </button>
+          <div className="flex min-w-0 items-center gap-3">
+            <a
+              href="/"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+              aria-label="概要に戻る"
+            >
+              ←
+            </a>
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-primary-600">IVR / 自動音声応答</p>
+              <h2 className="truncate text-2xl font-bold tracking-tight text-slate-950">
+                ルール設定
+              </h2>
             </div>
           </div>
 
