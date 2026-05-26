@@ -45,7 +45,7 @@ export default async function MePage() {
           />
           <button
             type="submit"
-            className="rounded bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white"
+            className="rounded bg-brand px-3 py-1.5 text-xs font-semibold text-white"
           >
             変更
           </button>
@@ -65,7 +65,7 @@ export default async function MePage() {
           />
           <button
             type="submit"
-            className="rounded bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white"
+            className="rounded bg-brand px-3 py-1.5 text-xs font-semibold text-white"
           >
             変更
           </button>
@@ -79,7 +79,7 @@ export default async function MePage() {
             <p className="mb-2 text-xs text-slate-500">
               有効化すると、ログイン時に Authenticator アプリの 6 桁コードが必要になります。
             </p>
-            <button type="submit" className="rounded bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white">
+            <button type="submit" className="rounded bg-brand px-3 py-1.5 text-xs font-semibold text-white">
               2FA を有効化
             </button>
           </form>
@@ -99,7 +99,7 @@ export default async function MePage() {
             <form action={disableTotpAction}>
               <button
                 type="submit"
-                className="rounded border border-red-300 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50"
+                className="rounded border border-melon-300 bg-white px-3 py-1.5 text-xs font-semibold text-melon-500 hover:bg-melon-50"
               >
                 2FA を無効化
               </button>

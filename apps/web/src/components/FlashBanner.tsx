@@ -40,14 +40,14 @@ export function FlashBanner() {
       {err && (
         <div
           role="alert"
-          className="mt-2 rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800 shadow-sm"
+          className="mt-2 rounded border border-melon-300 bg-melon-50 px-3 py-2 text-sm text-melon-600 shadow-sm"
         >
           <div className="flex items-start gap-2">
             <span aria-hidden>⚠️</span>
             <div className="flex-1">
               <p>{err}</p>
               {errHint && (
-                <p className="mt-1 text-xs text-red-700">
+                <p className="mt-1 text-xs text-melon-500">
                   <span className="font-semibold">次に確認すること: </span>
                   {errHint}
                 </p>
@@ -59,7 +59,7 @@ export function FlashBanner() {
       {ok && (
         <div
           role="status"
-          className="mt-2 rounded border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 shadow-sm"
+          className="mt-2 rounded border border-brand-300 bg-brand-50 px-3 py-2 text-sm text-brand-700 shadow-sm"
         >
           <span aria-hidden>✅ </span>
           {ok}

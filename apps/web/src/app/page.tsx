@@ -155,7 +155,7 @@ export default async function OverviewPage() {
           </ul>
         )}
         <p className="mt-3 text-xs">
-          <a className="text-blue-600 hover:underline" href="/extensions">
+          <a className="text-brand hover:underline" href="/extensions">
             → 端末を追加・編集する
           </a>
         </p>
@@ -227,9 +227,9 @@ function StatusBadge({
   value: number;
 }) {
   const classes = {
-    ok: 'border-emerald-200 bg-emerald-50 text-emerald-900',
-    warning: 'border-amber-200 bg-amber-50 text-amber-900',
-    error: 'border-red-200 bg-red-50 text-red-900',
+    ok: 'border-brand-200 bg-brand-50 text-brand-800',
+    warning: 'border-banana-200 bg-banana-50 text-banana-500',
+    error: 'border-melon-200 bg-melon-50 text-melon-600',
   }[tone];
   return (
     <div className={`rounded-md border px-2 py-2 ${classes}`}>

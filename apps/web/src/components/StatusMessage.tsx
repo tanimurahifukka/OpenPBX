@@ -20,11 +20,11 @@ interface StatusMessageProps {
 }
 
 const TONE_STYLES: Record<StatusTone, { border: string; bg: string; text: string; icon: string }> = {
-  ok:    { border: 'border-emerald-200', bg: 'bg-emerald-50', text: 'text-emerald-800', icon: '✓' },
-  warn:  { border: 'border-amber-200',   bg: 'bg-amber-50',   text: 'text-amber-800',   icon: '!' },
-  error: { border: 'border-red-200',     bg: 'bg-red-50',     text: 'text-red-800',     icon: '✗' },
-  info:  { border: 'border-slate-200',   bg: 'bg-slate-50',   text: 'text-slate-700',   icon: 'i' },
-  off:   { border: 'border-slate-200',   bg: 'bg-slate-50',   text: 'text-slate-500',   icon: '○' },
+  ok:    { border: 'border-brand-200',      bg: 'bg-brand-50',      text: 'text-brand-700',      icon: '✓' },
+  warn:  { border: 'border-banana-200',     bg: 'bg-banana-50',     text: 'text-banana-500',     icon: '!' },
+  error: { border: 'border-melon-200',      bg: 'bg-melon-50',      text: 'text-melon-600',      icon: '✗' },
+  info:  { border: 'border-slate-200',      bg: 'bg-slate-50',      text: 'text-slate-700',      icon: 'i' },
+  off:   { border: 'border-slate-200',      bg: 'bg-slate-50',      text: 'text-slate-500',      icon: '○' },
 };
 
 export function StatusMessage({ tone, title, description, action, showAdminEscalation }: StatusMessageProps) {
@@ -46,7 +46,7 @@ export function StatusMessage({ tone, title, description, action, showAdminEscal
           {action && (
             <Link
               href={action.href}
-              className="rounded bg-blue-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-blue-700"
+              className="rounded bg-brand px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-brand-500"
             >
               {action.label}
             </Link>

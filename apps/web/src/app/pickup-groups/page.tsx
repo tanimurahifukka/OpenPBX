@@ -91,7 +91,7 @@ function PickupForm({ action, initial, submitLabel, deleteAction }: Props) {
       <div className="flex items-end gap-2">
         <button
           type="submit"
-          className="rounded-md border border-slate-300 bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
+          className="rounded-md border border-slate-300 bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-500"
         >
           {submitLabel}
         </button>
@@ -99,7 +99,7 @@ function PickupForm({ action, initial, submitLabel, deleteAction }: Props) {
           <ConfirmButton
             confirmText={`ピックアップグループ ${initial.name} を削除しますか？`}
             formAction={deleteAction}
-            className="rounded-md border border-red-300 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50"
+            className="rounded-md border border-melon-300 bg-white px-3 py-1.5 text-xs font-semibold text-melon-500 hover:bg-melon-50"
           >
             削除
           </ConfirmButton>

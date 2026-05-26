@@ -71,7 +71,7 @@ export default async function SecurityPage() {
           <div className="col-span-2 sm:col-span-4">
             <button
               type="submit"
-              className="rounded bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
+              className="rounded bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-500"
             >
               保存
             </button>
@@ -96,7 +96,7 @@ export default async function SecurityPage() {
             placeholder="メモ"
             className="rounded border border-slate-300 px-2 py-1 text-sm"
           />
-          <button type="submit" className="rounded bg-blue-600 px-3 py-1 text-xs font-semibold text-white">
+          <button type="submit" className="rounded bg-brand px-3 py-1 text-xs font-semibold text-white">
             追加 / 更新
           </button>
         </form>
@@ -112,7 +112,7 @@ export default async function SecurityPage() {
                   <input type="hidden" name="cidr" value={i.cidr} />
                   <ConfirmButton
                     confirmText={`${i.cidr} を許可リストから削除しますか？`}
-                    className="rounded border border-red-300 bg-white px-2 py-0.5 text-xs text-red-700 hover:bg-red-50"
+                    className="rounded border border-melon-300 bg-white px-2 py-0.5 text-xs text-melon-500 hover:bg-melon-50"
                   >
                     削除
                   </ConfirmButton>

@@ -26,7 +26,7 @@ export default async function PhonebookPage({ searchParams }: { searchParams: Pr
           全端末から共通参照する連絡先。顧客・取引先・スタッフなど業種を問わず登録できます。
           着信時の発信者表示や、クリックトゥコールの相手選択に使います。
         </p>
-        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+        <div className="rounded-md border border-banana-200 bg-banana-50 px-3 py-2 text-xs text-banana-500">
           <p className="font-semibold">📒 この電話帳は番号を見分けるためのローカルメモです。</p>
           <ul className="mt-1 list-disc pl-5 space-y-0.5">
             <li>診療内容・相談内容・案件詳細・契約金額など機微情報は書かないでください。</li>
@@ -49,7 +49,7 @@ export default async function PhonebookPage({ searchParams }: { searchParams: Pr
           className="flex-1 rounded border border-slate-300 px-2 py-1 text-sm"
           aria-label="検索"
         />
-        <button type="submit" className="rounded bg-blue-600 px-3 py-1 text-xs font-semibold text-white">
+        <button type="submit" className="rounded bg-brand px-3 py-1 text-xs font-semibold text-white">
           検索
         </button>
       </form>
@@ -143,7 +143,7 @@ function PhonebookForm({ action, initial, submitLabel, deleteAction }: Props) {
       <div className="flex items-end gap-2">
         <button
           type="submit"
-          className="rounded-md border border-slate-300 bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
+          className="rounded-md border border-slate-300 bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-500"
         >
           {submitLabel}
         </button>
@@ -151,7 +151,7 @@ function PhonebookForm({ action, initial, submitLabel, deleteAction }: Props) {
           <ConfirmButton
             confirmText={`「${initial.name}」を電話帳から削除しますか？`}
             formAction={deleteAction}
-            className="rounded-md border border-red-300 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50"
+            className="rounded-md border border-melon-300 bg-white px-3 py-1.5 text-xs font-semibold text-melon-500 hover:bg-melon-50"
           >
             削除
           </ConfirmButton>

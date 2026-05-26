@@ -157,7 +157,7 @@ export function GuidanceTtsForm({
         </span>
       </label>
 
-      <p className="rounded border border-amber-200 bg-amber-50 p-2 text-[11px] text-amber-900">
+      <p className="rounded border border-banana-200 bg-banana-50 p-2 text-[11px] text-banana-500">
         電話で誰にでも流れる案内文です。個人名、診療内容、相談内容、契約内容などは入れないでください。
       </p>
 
@@ -196,7 +196,7 @@ export function GuidanceTtsForm({
         <button
           type="submit"
           disabled={busy}
-          className="rounded bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {busy ? '作成中…' : '音声を作成'}
         </button>
@@ -206,10 +206,10 @@ export function GuidanceTtsForm({
       </div>
 
       {error && (
-        <p className="rounded border border-red-200 bg-red-50 p-2 text-xs text-red-700">{error}</p>
+        <p className="rounded border border-melon-200 bg-melon-50 p-2 text-xs text-melon-500">{error}</p>
       )}
       {success && (
-        <div className="rounded border border-emerald-200 bg-emerald-50 p-2 text-xs text-emerald-800">
+        <div className="rounded border border-brand-200 bg-brand-50 p-2 text-xs text-brand-700">
           <p>
             音声を作成しました:{' '}
             <code className="font-mono">{success.name}</code>

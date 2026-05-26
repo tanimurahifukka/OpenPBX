@@ -17,14 +17,14 @@ const STATE_LABEL: Record<DeviceState, string> = {
 
 const STATE_TONE: Record<DeviceState, string> = {
   unknown: 'bg-slate-100 text-slate-700 border-slate-300',
-  not_inuse: 'bg-emerald-50 text-emerald-800 border-emerald-300',
-  inuse: 'bg-blue-50 text-blue-800 border-blue-300',
+  not_inuse: 'bg-brand-50 text-brand-700 border-brand-300',
+  inuse: 'bg-brand-50 text-brand-700 border-brand-300',
   busy: 'bg-orange-50 text-orange-800 border-orange-300',
-  invalid: 'bg-red-50 text-red-800 border-red-300',
+  invalid: 'bg-melon-50 text-melon-600 border-melon-300',
   unavailable: 'bg-slate-100 text-slate-500 border-slate-300',
-  ringing: 'bg-amber-50 text-amber-800 border-amber-300',
-  ringinuse: 'bg-amber-50 text-amber-800 border-amber-300',
-  onhold: 'bg-violet-50 text-violet-800 border-violet-300',
+  ringing: 'bg-banana-50 text-banana-500 border-amber-300',
+  ringinuse: 'bg-banana-50 text-banana-500 border-amber-300',
+  onhold: 'bg-violet-50 text-canteloupe-500 border-violet-300',
 };
 
 interface Props {
@@ -85,7 +85,7 @@ export function DeviceList({ initialDevices, initialConnected }: Props) {
       <div className="flex items-center gap-2 text-xs">
         <span
           aria-label={connected ? 'AMI 接続中' : 'AMI 切断'}
-          className={`inline-block h-2 w-2 rounded-full ${connected ? 'bg-emerald-500' : 'bg-red-500'}`}
+          className={`inline-block h-2 w-2 rounded-full ${connected ? 'bg-brand-500' : 'bg-melon-500'}`}
         />
         <span className="text-slate-600">{connected ? 'AMI 接続中' : 'AMI 未接続'}</span>
       </div>
@@ -107,7 +107,7 @@ export function DeviceList({ initialDevices, initialConnected }: Props) {
                 {STATE_LABEL[d.state]}
               </span>
               <span
-                className={`text-xs ${d.reachable ? 'text-emerald-700' : 'text-slate-400'}`}
+                className={`text-xs ${d.reachable ? 'text-brand-600' : 'text-slate-400'}`}
                 aria-label={d.reachable ? '登録あり' : '登録なし'}
               >
                 {d.reachable ? '● 登録' : '○ 未登録'}

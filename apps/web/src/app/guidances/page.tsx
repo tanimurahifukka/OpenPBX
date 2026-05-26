@@ -82,7 +82,7 @@ export default async function GuidancesPage({ searchParams }: PageProps) {
                 href="https://voicevox.hiroshiba.jp/term/"
                 target="_blank"
                 rel="noreferrer"
-                className="text-blue-700 hover:underline"
+                className="text-brand-600 hover:underline"
               >
                 VOICEVOX 利用規約
               </a>{' '}
@@ -123,7 +123,7 @@ export default async function GuidancesPage({ searchParams }: PageProps) {
           <div className="flex items-end">
             <button
               type="submit"
-              className="rounded bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
+              className="rounded bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-500"
             >
               アップロード
             </button>
@@ -152,7 +152,7 @@ export default async function GuidancesPage({ searchParams }: PageProps) {
                     <span
                       className={
                         g.source === 'tts'
-                          ? 'rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-semibold text-violet-800'
+                          ? 'rounded bg-canteloupe-100 px-1.5 py-0.5 text-[10px] font-semibold text-canteloupe-500'
                           : 'rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-700'
                       }
                     >
@@ -177,7 +177,7 @@ export default async function GuidancesPage({ searchParams }: PageProps) {
                   <input type="hidden" name="name" value={g.name} />
                   <ConfirmButton
                     confirmText={`ガイダンス ${g.name} を削除しますか？`}
-                    className="rounded border border-red-300 bg-white px-2 py-0.5 text-xs text-red-700 hover:bg-red-50"
+                    className="rounded border border-melon-300 bg-white px-2 py-0.5 text-xs text-melon-500 hover:bg-melon-50"
                   >
                     削除
                   </ConfirmButton>
