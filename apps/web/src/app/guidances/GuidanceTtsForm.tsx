@@ -196,7 +196,7 @@ export function GuidanceTtsForm({
         <button
           type="submit"
           disabled={busy}
-          className="rounded bg-primary px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-md bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400"
         >
           {busy ? '作成中…' : '音声を作成して登録'}
         </button>

@@ -122,7 +122,7 @@ export default async function GuidancesPage({ searchParams }: PageProps) {
           </div>
           <button
             type="submit"
-            className="rounded bg-primary px-4 py-2 text-xs font-semibold text-white hover:bg-primary-500"
+            className="rounded-md bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-blue-700"
           >
             アップロード
           </button>
