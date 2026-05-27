@@ -144,7 +144,7 @@ export function ConnectionsForm({ initialCr, initialVb }: Props) {
               type="button"
               onClick={handleCrTest}
               disabled={crBusy}
-              className="ml-auto rounded border border-slate-300 px-2 py-0.5 text-[11px] text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              className="ml-auto rounded border border-slate-300 px-2 py-0.5 text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-50"
             >
               テスト接続
             </button>
@@ -162,7 +162,7 @@ export function ConnectionsForm({ initialCr, initialVb }: Props) {
               className="mt-1 w-full rounded border border-slate-300 px-2 py-1 font-mono text-xs"
             />
           </label>
-          <p className="text-[11px] text-slate-400">
+          <p className="text-xs text-slate-400">
             接続コードは command-room の管理者に発行してもらってください。
             JSON 形式、または openpbx-connect:// 形式のどちらにも対応しています。
           </p>
@@ -197,7 +197,7 @@ export function ConnectionsForm({ initialCr, initialVb }: Props) {
               type="button"
               onClick={handleVbTest}
               disabled={vbBusy}
-              className="ml-auto rounded border border-slate-300 px-2 py-0.5 text-[11px] text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              className="ml-auto rounded border border-slate-300 px-2 py-0.5 text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-50"
             >
               テスト接続
             </button>
@@ -220,7 +220,7 @@ export function ConnectionsForm({ initialCr, initialVb }: Props) {
                 type="button"
                 onClick={handleVbDetect}
                 disabled={vbDetecting}
-                className="rounded border border-slate-300 px-2 py-1 text-[11px] text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-50"
               >
                 {vbDetecting ? '検出中…' : '自動検出'}
               </button>

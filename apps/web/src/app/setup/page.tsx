@@ -324,7 +324,7 @@ export default async function SetupPage() {
           以下のテキストには接続キー / パスワード / 録音内容は含まれていません。
           上の「コピー」ボタンを押すか、テキストを手動で選択して管理者に送ってください。
         </p>
-        <pre className="max-h-64 overflow-auto rounded bg-white p-3 font-mono text-[11px] text-slate-800">
+        <pre className="max-h-64 overflow-auto rounded bg-white p-3 font-mono text-xs text-slate-800">
 {diagnosticText}
         </pre>
       </section>
@@ -368,7 +368,7 @@ function CheckList({
                   <span className="mr-2 text-slate-400">{i + 1}.</span>
                   {c.label}
                 </h4>
-                <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${s.badge}`}>
+                <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${s.badge}`}>
                   {c.statusLabel}
                 </span>
               </div>
@@ -384,7 +384,7 @@ function CheckList({
                 </div>
               )}
               {c.technical && (
-                <details className="text-[10px] text-slate-500">
+                <details className="text-xs text-slate-500">
                   <summary className="cursor-pointer">技術詳細</summary>
                   <code className="mt-1 block whitespace-pre-wrap font-mono">{c.technical}</code>
                 </details>

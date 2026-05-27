@@ -84,10 +84,10 @@ export function DeviceList({ initialDevices, initialConnected }: Props) {
     <section className="space-y-3" aria-label="端末一覧">
       <div className="flex items-center gap-2 text-xs">
         <span
-          aria-label={connected ? 'AMI 接続中' : 'AMI 切断'}
+          aria-label={connected ? '電話システム接続中' : '電話システム切断'}
           className={`inline-block h-2 w-2 rounded-full ${connected ? 'bg-primary-500' : 'bg-danger-light0'}`}
         />
-        <span className="text-slate-600">{connected ? 'AMI 接続中' : 'AMI 未接続'}</span>
+        <span className="text-slate-600">{connected ? '電話システム接続中' : '電話システム未接続'}</span>
       </div>
       {devices.length === 0 ? (
         <p className="rounded-lg border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-500">
@@ -113,7 +113,7 @@ export function DeviceList({ initialDevices, initialConnected }: Props) {
                 {d.reachable ? '● 登録' : '○ 未登録'}
               </span>
               {d.contact && (
-                <span className="ml-auto truncate font-mono text-[10px] text-slate-400">{d.contact}</span>
+                <span className="ml-auto truncate font-mono text-xs text-slate-400">{d.contact}</span>
               )}
             </li>
           ))}

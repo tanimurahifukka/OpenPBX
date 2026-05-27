@@ -102,7 +102,7 @@ function buildGraph(
         label: (
           <div className="px-1 text-center">
             <div className="text-xs font-semibold text-primary-700">IVR {menuNumber}</div>
-            {menuName && <div className="text-[10px] text-slate-500">{menuName}</div>}
+            {menuName && <div className="text-xs text-slate-500">{menuName}</div>}
           </div>
         ),
       },

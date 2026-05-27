@@ -62,7 +62,7 @@ export default async function LoginPage({
         >
           ログイン
         </button>
-        <p className="text-[10px] text-slate-400">
+        <p className="text-xs text-slate-400">
           初回は <code>admin / admin-please-change</code> でログインして、すぐ /accounts でパスワードを変更してください。
         </p>
       </form>

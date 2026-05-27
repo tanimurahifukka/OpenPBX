@@ -29,9 +29,9 @@ export default async function CdrPage({ searchParams }: { searchParams: Promise<
   return (
     <div className="space-y-4">
       <header className="space-y-1">
-        <h2 className="text-lg font-semibold">発着信履歴 (CDR)</h2>
+        <h2 className="text-lg font-semibold">発着信履歴</h2>
         <p className="text-xs text-slate-500">
-          Asterisk の cdr_csv (Master.csv) を 10 秒ごとに取り込み。最新 300 件まで表示。
+          通話の記録を自動で取り込みます。最新 300 件まで表示。
         </p>
       </header>
 
@@ -39,24 +39,24 @@ export default async function CdrPage({ searchParams }: { searchParams: Promise<
         <input
           name="src"
           defaultValue={sp.src ?? ''}
-          placeholder="発信元 (src) を含む"
+          placeholder="発信元"
           className="rounded border border-slate-300 px-2 py-1 text-sm"
-          aria-label="src フィルタ"
+          aria-label="発信元フィルタ"
         />
         <input
           name="dst"
           defaultValue={sp.dst ?? ''}
-          placeholder="宛先 (dst) を含む"
+          placeholder="宛先"
           className="rounded border border-slate-300 px-2 py-1 text-sm"
-          aria-label="dst フィルタ"
+          aria-label="宛先フィルタ"
         />
         <select
           name="disposition"
           defaultValue={sp.disposition ?? ''}
           className="rounded border border-slate-300 px-2 py-1 text-sm"
-          aria-label="disposition フィルタ"
+          aria-label="結果フィルタ"
         >
-          <option value="">— 全 disposition —</option>
+          <option value="">— すべての結果 —</option>
           <option value="ANSWERED">ANSWERED</option>
           <option value="NO ANSWER">NO ANSWER</option>
           <option value="BUSY">BUSY</option>
@@ -65,7 +65,7 @@ export default async function CdrPage({ searchParams }: { searchParams: Promise<
         <input
           name="from"
           defaultValue={sp.from ?? ''}
-          placeholder="YYYY-MM-DD HH:MM:SS (UTC)"
+          placeholder="開始日 (例: 2026-05-27)"
           className="rounded border border-slate-300 px-2 py-1 font-mono text-xs"
           aria-label="from"
         />
@@ -92,7 +92,7 @@ export default async function CdrPage({ searchParams }: { searchParams: Promise<
                 <th className="px-2 py-2 text-right">通話</th>
                 <th className="px-2 py-2 text-right">うち応答</th>
                 <th className="px-2 py-2 text-left">結果</th>
-                <th className="px-2 py-2 text-left font-mono">uniqueid</th>
+                <th className="px-2 py-2 text-left text-slate-400">ID</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">

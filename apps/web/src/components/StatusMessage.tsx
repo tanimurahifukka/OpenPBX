@@ -46,7 +46,7 @@ export function StatusMessage({ tone, title, description, action, showAdminEscal
           {action && (
             <Link
               href={action.href}
-              className="rounded bg-primary px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-primary-500"
+              className="rounded bg-primary px-2.5 py-1 text-xs font-semibold text-white hover:bg-primary-500"
             >
               {action.label}
             </Link>
@@ -54,7 +54,7 @@ export function StatusMessage({ tone, title, description, action, showAdminEscal
           {showAdminEscalation && (
             <Link
               href="/setup#diagnostics"
-              className="rounded border border-gray-300 px-2.5 py-1 text-[11px] text-gray-700 hover:bg-gray-100"
+              className="rounded border border-gray-300 px-2.5 py-1 text-xs text-gray-700 hover:bg-gray-100"
             >
               管理者に診断情報を送る
             </Link>

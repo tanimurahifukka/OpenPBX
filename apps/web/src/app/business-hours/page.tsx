@@ -12,6 +12,7 @@ import {
   deleteTimeRuleAction,
 } from '@/app/actions';
 import { ConfirmButton } from '@/components/ConfirmButton';
+import { DayPresets } from './DayPresets';
 import { requireAccount } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -42,9 +43,8 @@ export default async function BusinessHoursPage() {
       <header>
         <h2 className="text-lg font-semibold">営業時間 / 祝日</h2>
         <p className="text-xs text-slate-500">
-          営業中の曜日と時間帯を登録すると、Asterisk dialplan の
-          <code className="ml-1 rounded bg-slate-100 px-1">[businesshours]</code> から判定できます。
-          複数行登録可 (午前/午後を分けたい時など)。
+          営業中の曜日と時間帯を登録します。IVR の営業時間外ルートで判定に使います。
+          午前・午後を分けたい場合は複数行で登録できます。
         </p>
       </header>
 
@@ -213,28 +213,10 @@ function TimeRuleForm({ action, initial, submitLabel, deleteAction }: RuleFormPr
               </label>
             );
           })}
-          <span className="ml-auto flex items-center gap-2 text-[10px] text-slate-500">
-            プリセット:
-            {PRESETS.map((p) => (
-              <PresetButton key={p.label} label={p.label} days={p.days} />
-            ))}
-          </span>
+          <DayPresets presets={PRESETS} />
         </div>
       </fieldset>
     </form>
   );
 }
 
-// Server Component なので JS インタラクションは限られるが、
-// プリセットボタンは <button onClick> を使えないため、ラベル風の見た目だけで現状はサポートしない。
-// 代わりに「全部 / 平日 / 土日」のテキストヒントを並べる。
-function PresetButton({ label, days }: { label: string; days: string[] }) {
-  return (
-    <span
-      className="rounded border border-slate-300 bg-white px-2 py-0.5 text-[10px] text-slate-500"
-      title={days.join(',')}
-    >
-      {label}
-    </span>
-  );
-}

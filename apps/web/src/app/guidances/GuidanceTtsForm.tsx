@@ -152,12 +152,12 @@ export function GuidanceTtsForm({
           placeholder="お電話ありがとうございます。ご用件の番号を押してください。"
           className="mt-1 w-full rounded border border-slate-300 px-2 py-1 text-sm"
         />
-        <span className="mt-1 block text-right text-[10px] text-slate-400">
+        <span className="mt-1 block text-right text-xs text-slate-400">
           残り {remainingChars} 文字
         </span>
       </label>
 
-      <p className="rounded border border-warning bg-warning-light p-2 text-[11px] text-warning-dark">
+      <p className="rounded border border-warning bg-warning-light p-2 text-xs text-warning-dark">
         電話で誰にでも流れる案内文です。個人名、診療内容、相談内容、契約内容などは入れないでください。
       </p>
 
@@ -201,7 +201,7 @@ export function GuidanceTtsForm({
           {busy ? '作成中…' : '音声を作成'}
         </button>
         {selectedSpeaker && (
-          <span className="text-[11px] text-slate-500">{selectedSpeaker.credit}</span>
+          <span className="text-xs text-slate-500">{selectedSpeaker.credit}</span>
         )}
       </div>
 

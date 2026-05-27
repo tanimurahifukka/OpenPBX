@@ -252,13 +252,13 @@ export function WizardForm() {
                   type="button"
                   onClick={handleVbDetect}
                   disabled={vbDetecting}
-                  className="shrink-0 rounded border border-slate-300 px-2 py-1 text-[11px] text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                  className="shrink-0 rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                 >
                   {vbDetecting ? '検出中…' : '自動検出'}
                 </button>
               </div>
               {vbDetectResult && (
-                <p className="text-[11px] text-slate-600">{vbDetectResult}</p>
+                <p className="text-xs text-slate-600">{vbDetectResult}</p>
               )}
               <input
                 type="password"

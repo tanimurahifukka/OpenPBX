@@ -41,7 +41,7 @@ export function CopyDiagnosticButton({ text }: Props) {
       <button
         type="button"
         onClick={handleCopy}
-        className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary-400"
       >
         📋 診断情報をコピー
       </button>

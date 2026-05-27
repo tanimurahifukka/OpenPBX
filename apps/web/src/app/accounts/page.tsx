@@ -76,14 +76,14 @@ function AccountRow({ account: a, isMe }: { account: Account; isMe: boolean }) {
       <div className="flex items-baseline gap-3 text-sm">
         <span className="font-mono">{a.username}</span>
         {isMe && (
-          <span className="rounded-full border border-primary-300 bg-primary-50 px-2 py-0.5 text-[10px] font-semibold text-primary-700">
+          <span className="rounded-full border border-primary-300 bg-primary-50 px-2 py-0.5 text-xs font-semibold text-primary-700">
             あなた
           </span>
         )}
         <span className="text-slate-600">{a.displayName ?? '-'}</span>
         <span className="text-xs text-slate-500">{a.role}</span>
         {a.totpEnabled && (
-          <span className="rounded-full border border-primary-300 bg-primary-50 px-2 py-0.5 text-[10px] text-primary-700">
+          <span className="rounded-full border border-primary-300 bg-primary-50 px-2 py-0.5 text-xs text-primary-700">
             2FA
           </span>
         )}

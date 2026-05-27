@@ -101,7 +101,7 @@ const fieldClass =
   'mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100 disabled:bg-slate-100 disabled:text-slate-400';
 const compactFieldClass =
   'h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100 disabled:bg-slate-100 disabled:text-slate-400';
-const labelClass = 'text-[11px] font-semibold text-slate-500';
+const labelClass = 'text-xs font-semibold text-slate-500';
 
 interface CidRouteDraft {
   uid: string;
@@ -240,7 +240,7 @@ export function IvrEditor({ initial, upsertAction, deleteAction, guidances = [] 
             {isEdit ? '✓' : '+'}
           </span>
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold text-primary-600">
+            <p className="text-xs font-semibold text-primary-600">
               {isEdit ? 'ルール適用' : '新規ルール'}
             </p>
             <h3 className="truncate text-sm font-bold text-slate-950">{displayName}</h3>
@@ -319,7 +319,7 @@ export function IvrEditor({ initial, upsertAction, deleteAction, guidances = [] 
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div>
                 <p className="text-xs font-bold text-slate-950">着信フロー</p>
-                <p className="text-[11px] text-slate-500">押された番号ごとの分岐を上から順に管理します。</p>
+                <p className="text-xs text-slate-500">押された番号ごとの分岐を上から順に管理します。</p>
               </div>
               <div className="flex items-center gap-2">
                 {isEdit && (
@@ -406,7 +406,7 @@ export function IvrEditor({ initial, upsertAction, deleteAction, guidances = [] 
                   onRemoveAt={removeAt}
                   onAdd={addRow}
                 />
-                <p className="text-[11px] text-slate-500">
+                <p className="text-xs text-slate-500">
                   エッジクリックで分岐削除、細かい編集はリスト表示で行えます。
                 </p>
               </div>
@@ -439,7 +439,7 @@ export function IvrEditor({ initial, upsertAction, deleteAction, guidances = [] 
               <SummaryMetric label="別IVR" value={summary.nestedCount} />
               <SummaryMetric label="CallerID" value={cidRoutes.length} />
             </dl>
-            <div className="mt-3 rounded-md bg-primary-50 px-3 py-2 text-[11px] font-semibold text-primary-700">
+            <div className="mt-3 rounded-md bg-primary-50 px-3 py-2 text-xs font-semibold text-primary-700">
               {afterHoursAction ? '営業時間外ルートあり' : '営業時間内外で同じルール'}
             </div>
           </section>
@@ -469,7 +469,7 @@ export function IvrEditor({ initial, upsertAction, deleteAction, guidances = [] 
                 />
               ))}
               {guidances.length === 0 && (
-                <p className="text-[11px] text-slate-500">
+                <p className="text-xs text-slate-500">
                   /guidances に wav を登録するとここに選択肢として出ます。
                 </p>
               )}
@@ -544,7 +544,7 @@ function GuidanceField({
       href={`/guidances?prefillName=${encodeURIComponent(prefillName)}`}
       target="_blank"
       rel="noreferrer"
-      className="shrink-0 text-[10px] font-semibold text-accent-dark hover:underline"
+      className="shrink-0 text-xs font-semibold text-accent-dark hover:underline"
       title="文章から電話案内を作成して登録します"
     >
       文章から作る
@@ -567,7 +567,7 @@ function GuidanceField({
             <button
               type="button"
               onClick={() => setManual(false)}
-              className="shrink-0 text-[10px] font-semibold text-primary-600 hover:underline"
+              className="shrink-0 text-xs font-semibold text-primary-600 hover:underline"
             >
               一覧から選ぶ
             </button>
@@ -598,7 +598,7 @@ function GuidanceField({
         <button
           type="button"
           onClick={() => setManual(true)}
-          className="shrink-0 text-[10px] font-semibold text-slate-500 hover:underline"
+          className="shrink-0 text-xs font-semibold text-slate-500 hover:underline"
         >
           手入力
         </button>
@@ -611,7 +611,7 @@ function GuidanceField({
 function SummaryMetric({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
-      <dt className="text-[10px] font-semibold text-slate-500">{label}</dt>
+      <dt className="text-xs font-semibold text-slate-500">{label}</dt>
       <dd className="mt-1 font-mono text-lg font-bold text-slate-950">{value}</dd>
     </div>
   );
@@ -640,7 +640,7 @@ function ScriptPreview({ options, afterHoursAction, afterHoursTarget, cidRouteCo
   return (
     <section className="rounded-lg border border-slate-200 bg-white p-4">
       <p className="text-xs font-bold text-slate-950">着信の流れプレビュー</p>
-      <p className="mt-1 text-[11px] text-slate-500">
+      <p className="mt-1 text-xs text-slate-500">
         実際の電話が来たときの順序を保存前に確認できます。
       </p>
       <div className="mt-3 space-y-1.5 text-xs text-slate-700">
@@ -680,11 +680,11 @@ function ScriptPreview({ options, afterHoursAction, afterHoursTarget, cidRouteCo
         ) : (
           <>
             <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
-              <p className="text-[10px] font-semibold text-slate-600">押された番号で分岐:</p>
+              <p className="text-xs font-semibold text-slate-600">押された番号で分岐:</p>
               <ul className="mt-1 space-y-0.5">
                 {digitLines.map((d, i) => (
-                  <li key={i} className="flex items-baseline gap-2 text-[11px]">
-                    <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary font-mono text-[10px] font-bold text-white">
+                  <li key={i} className="flex items-baseline gap-2 text-xs">
+                    <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary font-mono text-xs font-bold text-white">
                       {d.digit}
                     </span>
                     <span className="text-slate-700">
@@ -734,7 +734,7 @@ function FlowNode({
       </span>
       <div className="min-w-0">
         <p className="text-xs font-semibold text-slate-900">{title}</p>
-        {subtitle && <p className="text-[10px] text-slate-600">{subtitle}</p>}
+        {subtitle && <p className="text-xs text-slate-600">{subtitle}</p>}
       </div>
     </div>
   );
@@ -768,9 +768,9 @@ function AfterHoursPanel({
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-xs font-bold text-slate-950">営業時間外</p>
-          <p className="text-[11px] text-slate-500">閉店時だけ別ルートへ切り替えます。</p>
+          <p className="text-xs text-slate-500">閉店時だけ別ルートへ切り替えます。</p>
         </div>
-        <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${action ? 'bg-primary-50 text-primary-600' : 'bg-slate-100 text-slate-500'}`}>
+        <span className={`rounded-full px-2 py-1 text-xs font-bold ${action ? 'bg-primary-50 text-primary-600' : 'bg-slate-100 text-slate-500'}`}>
           {action ? 'ON' : 'OFF'}
         </span>
       </div>
@@ -821,7 +821,7 @@ function CallerIdRoutesPanel({ routes, onAdd, onChange, onRemove }: CallerIdRout
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-xs font-bold text-slate-950">CallerID 条件分岐</p>
-          <p className="text-[11px] text-slate-500">番号パターンに応じて先頭で振り分けます。</p>
+          <p className="text-xs text-slate-500">番号パターンに応じて先頭で振り分けます。</p>
         </div>
         <button
           type="button"
@@ -833,7 +833,7 @@ function CallerIdRoutesPanel({ routes, onAdd, onChange, onRemove }: CallerIdRout
       </div>
 
       {routes.length === 0 ? (
-        <p className="mt-3 rounded-md border border-dashed border-slate-200 bg-slate-50 px-3 py-4 text-center text-[11px] text-slate-500">
+        <p className="mt-3 rounded-md border border-dashed border-slate-200 bg-slate-50 px-3 py-4 text-center text-xs text-slate-500">
           条件分岐は未設定です。
         </p>
       ) : (
@@ -990,10 +990,10 @@ function SortableOptionCard({ index, option, onChange, onRemove }: CardProps) {
         </button>
       </div>
       <div className="border-t border-slate-100 px-3 py-2">
-        <span className={`inline-flex items-center rounded-full px-2 py-1 text-[10px] font-bold ring-1 ${meta.badgeClass}`}>
+        <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-bold ring-1 ${meta.badgeClass}`}>
           {meta.shortLabel}
         </span>
-        <span className="ml-2 text-[11px] text-slate-500">{meta.helper}</span>
+        <span className="ml-2 text-xs text-slate-500">{meta.helper}</span>
       </div>
     </li>
   );

@@ -81,24 +81,28 @@ function TrunkForm({ action, initial, submitLabel, deleteAction }: Props) {
         )}
       </div>
       <label className="text-xs text-slate-600">
-        from_user
-        <input name="fromUser" defaultValue={initial?.fromUser ?? ''}
+        発信者番号 (from_user)
+        <input name="fromUser" defaultValue={initial?.fromUser ?? ''} placeholder="プロバイダ契約書に記載"
           className="mt-1 w-full rounded border border-slate-300 px-2 py-1 font-mono text-sm" />
+        <span className="text-xs text-slate-400">SIP プロバイダから指定された発信元 ID</span>
       </label>
       <label className="text-xs text-slate-600">
-        from_domain
-        <input name="fromDomain" defaultValue={initial?.fromDomain ?? ''}
+        発信ドメイン (from_domain)
+        <input name="fromDomain" defaultValue={initial?.fromDomain ?? ''} placeholder="プロバイダ契約書に記載"
           className="mt-1 w-full rounded border border-slate-300 px-2 py-1 font-mono text-sm" />
+        <span className="text-xs text-slate-400">SIP プロバイダのドメイン名</span>
       </label>
       <label className="text-xs text-slate-600">
-        did_inbound
+        着信番号 (DID)
         <input name="didInbound" defaultValue={initial?.didInbound ?? ''} placeholder="例: 0312345678"
           className="mt-1 w-full rounded border border-slate-300 px-2 py-1 font-mono text-sm" />
+        <span className="text-xs text-slate-400">外から電話がかかってくる電話番号</span>
       </label>
       <label className="text-xs text-slate-600">
-        outbound_prefix
+        外線発信プレフィックス
         <input name="outboundPrefix" defaultValue={initial?.outboundPrefix ?? ''} placeholder="例: 0"
           className="mt-1 w-full rounded border border-slate-300 px-2 py-1 font-mono text-sm" />
+        <span className="text-xs text-slate-400">「0 を押してから外線」の 0 にあたる番号</span>
       </label>
       <label className="text-xs text-slate-600 sm:col-span-2">
         メモ

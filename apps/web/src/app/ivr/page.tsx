@@ -123,7 +123,7 @@ export default async function IvrPage() {
 function StatusCard({ label, value, unit }: { label: string; value: number; unit: string }) {
   return (
     <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm">
-      <p className="text-[11px] font-bold text-slate-500">{label}</p>
+      <p className="text-xs font-bold text-slate-500">{label}</p>
       <p className="mt-1 flex items-end gap-1">
         <span className="font-mono text-2xl font-bold text-slate-950">{value}</span>
         <span className="pb-1 text-xs font-semibold text-slate-500">{unit}</span>

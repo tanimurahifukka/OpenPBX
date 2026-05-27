@@ -62,11 +62,9 @@ export default async function OverviewPage() {
   return (
     <div className="space-y-6">
       <header>
-        <h2 className="text-lg font-semibold">PBX 概要</h2>
+        <h2 className="text-lg font-semibold">電話システム 概要</h2>
         <p className="text-xs text-slate-500">
-          Asterisk ベース PBX の状態と設定への入り口。文字起こし・要約などの AI 処理は別システム
-          (sibling repo) が <code className="rounded bg-slate-100 px-1">data/inbox/</code>{' '}
-          を監視して処理します。
+          電話システムの状態と設定への入り口です。
         </p>
       </header>
 
@@ -86,7 +84,7 @@ export default async function OverviewPage() {
         <div className="flex items-baseline justify-between">
           <h3 className="text-sm font-semibold text-slate-700">command-room 連携</h3>
           {missingPushEnv.length > 0 && (
-            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">未設定</span>
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">未設定</span>
           )}
         </div>
         {outboxCounts ? (
@@ -162,7 +160,7 @@ export default async function OverviewPage() {
       </section>
 
       <footer className="text-xs text-slate-400">
-        AI 統合層 (文字起こし / 要約 / チケット UI) は <code>../command-room-ai/</code> を参照。
+        文字起こし・要約は command-room と Hayabusa が担当します。
       </footer>
     </div>
   );
@@ -187,11 +185,11 @@ function Card({
       <div className={small ? 'mt-1 text-sm font-semibold tabular-nums' : 'mt-1 text-2xl font-bold tabular-nums'}>
         {value}
       </div>
-      {hint && <div className="text-[10px] text-slate-400">{hint}</div>}
+      {hint && <div className="text-xs text-slate-400">{hint}</div>}
     </div>
   );
   return href ? (
-    <a href={href} className="block hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+    <a href={href} className="block hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary-400">
       {inner}
     </a>
   ) : (
@@ -233,7 +231,7 @@ function StatusBadge({
   }[tone];
   return (
     <div className={`rounded-md border px-2 py-2 ${classes}`}>
-      <div className="text-[10px] font-semibold">{label}</div>
+      <div className="text-xs font-semibold">{label}</div>
       <div className="mt-0.5 text-lg font-bold tabular-nums">{value}</div>
     </div>
   );

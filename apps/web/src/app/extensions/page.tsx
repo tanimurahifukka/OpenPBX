@@ -76,7 +76,7 @@ function ExtensionForm({ action, initial, submitLabel, deleteAction }: Extension
           readOnly={isEdit}
           inputMode="numeric"
           pattern="[0-9]{2,6}"
-          className="mt-1 w-full rounded border border-slate-300 px-2 py-1 font-mono text-sm read-only:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="mt-1 w-full rounded border border-slate-300 px-2 py-1 font-mono text-sm read-only:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-400"
           placeholder="例: 1003"
           aria-label="内線番号"
         />
@@ -86,7 +86,7 @@ function ExtensionForm({ action, initial, submitLabel, deleteAction }: Extension
         <input
           name="displayName"
           defaultValue={initial?.displayName ?? ''}
-          className="mt-1 w-full rounded border border-slate-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="mt-1 w-full rounded border border-slate-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
           placeholder="例: Nurse 1003"
         />
       </label>
@@ -97,7 +97,7 @@ function ExtensionForm({ action, initial, submitLabel, deleteAction }: Extension
           required
           minLength={4}
           defaultValue={initial?.secret ?? ''}
-          className="mt-1 w-full rounded border border-slate-300 px-2 py-1 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="mt-1 w-full rounded border border-slate-300 px-2 py-1 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
           placeholder="4 文字以上"
         />
       </label>
@@ -106,7 +106,7 @@ function ExtensionForm({ action, initial, submitLabel, deleteAction }: Extension
         <input
           name="note"
           defaultValue={initial?.note ?? ''}
-          className="mt-1 w-full rounded border border-slate-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="mt-1 w-full rounded border border-slate-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
           placeholder="任意"
         />
       </label>
@@ -117,7 +117,7 @@ function ExtensionForm({ action, initial, submitLabel, deleteAction }: Extension
       <div className="flex items-end gap-2">
         <button
           type="submit"
-          className="rounded-md border border-slate-300 bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="rounded-md border border-slate-300 bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-400"
         >
           {submitLabel}
         </button>
@@ -125,7 +125,7 @@ function ExtensionForm({ action, initial, submitLabel, deleteAction }: Extension
           <ConfirmButton
             confirmText={`内線 ${initial.number} を削除しますか？`}
             formAction={deleteAction}
-            className="rounded-md border border-danger bg-white px-3 py-1.5 text-xs font-semibold text-danger hover:bg-danger-light focus:outline-none focus:ring-2 focus:ring-red-500"
+            className="rounded-md border border-danger bg-white px-3 py-1.5 text-xs font-semibold text-danger hover:bg-danger-light focus:outline-none focus:ring-2 focus:ring-danger"
             aria-label={`内線 ${initial.number} を削除`}
           >
             削除

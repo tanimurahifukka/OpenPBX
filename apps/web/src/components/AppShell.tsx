@@ -37,23 +37,18 @@ const NAV_GROUPS: NavGroup[] = [
     title: 'メイン',
     items: [
       { href: '/', label: '概要' },
-      { href: '/setup', label: 'セットアップ確認' },
       { href: '/devices', label: '端末状態' },
-      { href: '/cdr', label: '履歴' },
+      { href: '/cdr', label: '通話履歴' },
       { href: '/recordings', label: '録音' },
-      { href: '/concurrency', label: '同時通話' },
+      { href: '/softphone', label: 'ソフトフォン' },
     ],
-  },
-  {
-    title: '通話',
-    items: [{ href: '/softphone', label: 'ソフトフォン' }],
   },
   {
     title: '設定',
     items: [
-      { href: '/extensions', label: '端末管理' },
+      { href: '/setup', label: 'セットアップ' },
+      { href: '/extensions', label: '内線' },
       { href: '/ring-groups', label: '着信グループ' },
-      { href: '/pickup-groups', label: 'ピックアップ' },
       { href: '/phonebook', label: '電話帳' },
       { href: '/business-hours', label: '営業時間' },
       { href: '/ivr', label: 'IVR' },
@@ -61,14 +56,21 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    title: 'Admin',
+    title: '管理',
     items: [
-      { href: '/audit', label: '監査', minRole: 'supervisor' },
-      { href: '/network', label: 'ネットワーク', minRole: 'admin' },
-      { href: '/trunks', label: '外線', minRole: 'admin' },
+      { href: '/audit', label: '監査ログ', minRole: 'supervisor' },
       { href: '/accounts', label: 'アカウント', minRole: 'admin' },
+    ],
+  },
+  {
+    title: 'システム',
+    items: [
+      { href: '/network', label: 'ネットワーク', minRole: 'admin' },
+      { href: '/trunks', label: '外線 (SIP)', minRole: 'admin' },
       { href: '/security', label: 'セキュリティ', minRole: 'admin' },
-      { href: '/upgrades', label: 'Upgrade', minRole: 'admin' },
+      { href: '/pickup-groups', label: 'ピックアップ', minRole: 'admin' },
+      { href: '/concurrency', label: '同時通話', minRole: 'admin' },
+      { href: '/upgrades', label: 'アップグレード', minRole: 'admin' },
     ],
   },
 ];
@@ -221,7 +223,7 @@ function SidebarContent({ me, pathname, systemStatus, onNavigate, showCloseButto
           if (visibleItems.length === 0) return null;
           return (
             <div key={g.title} className="mb-3">
-              <h3 className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-white/40">
+              <h3 className="px-2 pb-1 text-xs font-semibold uppercase tracking-wider text-white/40">
                 {g.title}
               </h3>
               <ul className="space-y-0.5">

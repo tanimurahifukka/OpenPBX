@@ -43,9 +43,7 @@ export default async function GuidancesPage({ searchParams }: PageProps) {
       <header>
         <h2 className="text-lg font-semibold">共通ガイダンス</h2>
         <p className="text-xs text-slate-500">
-          IVR や着信フローで再生する音声ファイル (wav)。<code className="rounded bg-slate-100 px-1">name</code>{' '}
-          は Asterisk の <code className="rounded bg-slate-100 px-1">Playback(...)</code>{' '}
-          にそのまま渡るパス (例 <code>custom/ivr-welcome</code>)。8 kHz mono PCM 推奨。
+          IVR や着信フローで再生する音声ファイルを管理します。
         </p>
       </header>
 
@@ -76,7 +74,7 @@ export default async function GuidancesPage({ searchParams }: PageProps) {
               speakers={speakers}
               {...(safePrefillName !== undefined ? { prefillName: safePrefillName } : {})}
             />
-            <p className="mt-3 border-t border-slate-200 pt-2 text-[11px] text-slate-500">
+            <p className="mt-3 border-t border-slate-200 pt-2 text-xs text-slate-500">
               この機能は VOICEVOX を使用して音声を作成します。利用にあたっては{' '}
               <a
                 href="https://voicevox.hiroshiba.jp/term/"
@@ -152,8 +150,8 @@ export default async function GuidancesPage({ searchParams }: PageProps) {
                     <span
                       className={
                         g.source === 'tts'
-                          ? 'rounded bg-accent-light px-1.5 py-0.5 text-[10px] font-semibold text-accent-dark'
-                          : 'rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-700'
+                          ? 'rounded bg-accent-light px-1.5 py-0.5 text-xs font-semibold text-accent-dark'
+                          : 'rounded bg-slate-100 px-1.5 py-0.5 text-xs font-semibold text-slate-700'
                       }
                     >
                       {g.source === 'tts' ? '文章から作成' : 'アップロード'}

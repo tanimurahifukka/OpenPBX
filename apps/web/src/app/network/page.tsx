@@ -96,7 +96,7 @@ export default async function NetworkPage() {
               className="mt-1 w-full rounded border border-slate-300 px-2 py-1 font-mono text-sm"
             />
           </label>
-          <p className="text-[11px] text-slate-500">
+          <p className="text-xs text-slate-500">
             Mac の Docker Desktop で動かす場合、スマホや Tailnet の CIDR を Local Net に入れると
             外部アドレスへの書換が止まり、通話や登録が不安定になります。Asterisk が直接そのネットワークに
             到達できる構成だけ指定してください。
@@ -108,7 +108,7 @@ export default async function NetworkPage() {
             保存 + Asterisk reload
           </button>
         </form>
-        <p className="mt-3 text-[11px] text-slate-500">
+        <p className="mt-3 text-xs text-slate-500">
           最終更新: <span className="font-mono">{net.updatedAt || '—'}</span>
         </p>
       </section>
@@ -126,7 +126,7 @@ export default async function NetworkPage() {
             (Port は 5060)。Tailnet に同じ端末が居れば、外出先からでもそのまま内線として使えます。
           </li>
         </ol>
-        <p className="mt-2 text-[11px] text-slate-500">
+        <p className="mt-2 text-xs text-slate-500">
           ※ Docker on Mac でホストの Tailscale IP に 5060 を bind するには、`docker-compose.yml` の{' '}
           ports `&quot;5060:5060/udp&quot;` を `&quot;0.0.0.0:5060:5060/udp&quot;` (デフォルト) のまま
           にしておけば、ホスト経由で受けられます。
