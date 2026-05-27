@@ -39,7 +39,7 @@ function rowToAccount(r: AccountRow): Account {
   };
 }
 
-const COOKIE_NAME = 'cr_session';
+export const COOKIE_NAME = process.env.OPENPBX_COOKIE_NAME || 'openpbx_session';
 const SESSION_TTL_HOURS = 12;
 
 // scrypt ベース hash: $scrypt$N=2^15$r=8$p=1$salt(hex)$hash(hex)

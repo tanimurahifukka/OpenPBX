@@ -84,6 +84,7 @@ services:
       BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
       # HTTPS リバプロを置いたときだけ 1 にする (cookie secure 強制)
       COOKIE_SECURE: ${COOKIE_SECURE:-0}
+      OPENPBX_COOKIE_NAME: ${OPENPBX_COOKIE_NAME:-openpbx_session}
       # event-v1 watcher / push loop の設定。これらは optional。
       # EVENT_PUSH_* が揃ったときだけ push loop が起動し、outbox を command-room に送る。
       EVENT_INBOX_DIR: ${EVENT_INBOX_DIR:-/app/data/inbox}

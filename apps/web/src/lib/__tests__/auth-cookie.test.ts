@@ -8,6 +8,32 @@ function isCookieSecure(env: Partial<NodeJS.ProcessEnv>): boolean {
   return env.COOKIE_SECURE === '1';
 }
 
+function resolveCookieName(env: Partial<NodeJS.ProcessEnv>): string {
+  return env.OPENPBX_COOKIE_NAME || 'openpbx_session';
+}
+
+describe('auth cookie name (service isolation)', () => {
+  it('default cookie name is openpbx_session', () => {
+    expect(resolveCookieName({})).toBe('openpbx_session');
+  });
+
+  it('env OPENPBX_COOKIE_NAME overrides default', () => {
+    expect(resolveCookieName({ OPENPBX_COOKIE_NAME: 'custom_session' })).toBe('custom_session');
+  });
+
+  it('empty string falls back to default', () => {
+    expect(resolveCookieName({ OPENPBX_COOKIE_NAME: '' })).toBe('openpbx_session');
+  });
+
+  it('does not collide with Command Room cookie names', () => {
+    const name = resolveCookieName({});
+    const crCookies = ['authjs.session-token', 'cr_active_staff_id', '__Secure-cr-portal.session'];
+    for (const cr of crCookies) {
+      expect(name).not.toBe(cr);
+    }
+  });
+});
+
 describe('auth cookie secure 判定 (regression for P0-1)', () => {
   it('COOKIE_SECURE=1 のとき secure=true', () => {
     expect(isCookieSecure({ COOKIE_SECURE: '1' })).toBe(true);

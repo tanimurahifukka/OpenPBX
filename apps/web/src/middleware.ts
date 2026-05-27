@@ -6,6 +6,8 @@ import { NextRequest, NextResponse } from 'next/server';
 // / Server Action (await requireRole(...)) で必ず行うこと。
 const PUBLIC_PATHS = ['/login', '/api/login', '/api/logout', '/api/health', '/setup/wizard', '/api/settings/wizard'];
 
+const COOKIE_NAME = process.env.OPENPBX_COOKIE_NAME || 'openpbx_session';
+
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   if (
@@ -15,7 +17,7 @@ export function middleware(req: NextRequest) {
   ) {
     return NextResponse.next();
   }
-  const hasSession = req.cookies.get('cr_session');
+  const hasSession = req.cookies.get(COOKIE_NAME);
   if (!hasSession) {
     // /api/* は JSON API なのでリダイレクトせず 401 を返す
     if (pathname.startsWith('/api/')) {
