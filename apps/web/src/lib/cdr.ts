@@ -6,6 +6,7 @@
 import fs from 'node:fs/promises';
 import fssync from 'node:fs';
 import { getDb } from './db';
+import { detectMissedCalls, deduplicateByCaller, recordMissedCallEvent } from './missedCalls';
 
 const CSV_PATH = process.env.CDR_CSV_PATH ?? '/app/data/asterisk-cdr/Master.csv';
 
@@ -301,9 +302,26 @@ const KEY = '__commandRoomCdrTicker';
 export function startCdrIngestLoop(): void {
   const g = globalThis as unknown as Record<string, NodeJS.Timeout | undefined>;
   if (g[KEY]) return;
-  g[KEY] = setInterval(() => {
-    ingestCdrOnce().catch((e) => console.error('[cdr] ingest error', e));
-  }, 10_000);
-  // 初回も即実行
-  ingestCdrOnce().catch((e) => console.error('[cdr] initial ingest error', e));
+  async function tick() {
+    try {
+      const result = await ingestCdrOnce();
+      if (result.ingested > 0) {
+        try {
+          const missed = deduplicateByCaller(detectMissedCalls(2));
+          for (const call of missed) {
+            recordMissedCallEvent(call.uniqueid);
+          }
+          if (missed.length > 0) {
+            console.log(`[cdr] detected ${missed.length} missed call(s)`);
+          }
+        } catch (e) {
+          console.error('[cdr] missed call detection error', e);
+        }
+      }
+    } catch (e) {
+      console.error('[cdr] ingest error', e);
+    }
+  }
+  g[KEY] = setInterval(tick, 10_000);
+  tick();
 }

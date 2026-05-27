@@ -264,6 +264,35 @@ CREATE TABLE IF NOT EXISTS sip_trunks (
   updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS missed_call_events (
+  uniqueid    TEXT PRIMARY KEY,
+  created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS voicemail_boxes (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  number      TEXT NOT NULL UNIQUE,
+  name        TEXT,
+  prompt      TEXT,
+  updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS voicemail_messages (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  box_id          INTEGER NOT NULL REFERENCES voicemail_boxes(id) ON DELETE CASCADE,
+  caller_id       TEXT NOT NULL,
+  caller_name     TEXT NOT NULL DEFAULT '',
+  unique_id       TEXT NOT NULL UNIQUE,
+  recording_file  TEXT,
+  duration_sec    INTEGER,
+  status          TEXT NOT NULL DEFAULT 'new',
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  read_at         TEXT,
+  callback_at     TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_vm_messages_box ON voicemail_messages(box_id, status);
+CREATE INDEX IF NOT EXISTS idx_vm_messages_created ON voicemail_messages(created_at DESC);
+
 CREATE TABLE IF NOT EXISTS event_outbox (
   event_id      TEXT PRIMARY KEY,             -- openpbx:<pbxInstanceId>:<uniqueId>
   status        TEXT NOT NULL DEFAULT 'pending',  -- pending | sent | dead
@@ -289,6 +318,7 @@ export function applySchema(db: Database.Database): void {
   migrateExtensions(db);
   migratePhonebook(db);
   migrateIvrMenus(db);
+  migrateRingGroups(db);
   dropPatientTables(db);
   db.exec(SEED_EXTENSIONS);
   seedDefaultIvr(db);
@@ -368,6 +398,17 @@ function migrateIvrMenus(db: Database.Database): void {
   }
 }
 
+function migrateRingGroups(db: Database.Database): void {
+  const cols = db.prepare(`PRAGMA table_info(ring_groups)`).all() as Array<{ name: string }>;
+  const names = new Set(cols.map((c) => c.name));
+  if (!names.has('fallback_action')) {
+    db.exec(`ALTER TABLE ring_groups ADD COLUMN fallback_action TEXT`);
+  }
+  if (!names.has('fallback_target')) {
+    db.exec(`ALTER TABLE ring_groups ADD COLUMN fallback_target TEXT`);
+  }
+}
+
 function migrateExtensions(db: Database.Database): void {
   const cols = db.prepare(`PRAGMA table_info(extensions)`).all() as Array<{ name: string }>;
   const names = new Set(cols.map((c) => c.name));
@@ -420,6 +461,14 @@ export function getDb(): Database.Database {
       console.log('[db] ivr dialplan initialized on startup');
     } catch (e) {
       console.warn('[db] ivr dialplan initial sync failed', e);
+    }
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { writeVoicemailDialplanAndReload } = require('./voicemail') as typeof import('./voicemail');
+      await writeVoicemailDialplanAndReload();
+      console.log('[db] voicemail dialplan initialized on startup');
+    } catch (e) {
+      console.warn('[db] voicemail dialplan initial sync failed', e);
     }
     try {
       // CDR を 10 秒ごとに ingest するループを起動時に開始 (/cdr を開かなくても動く)

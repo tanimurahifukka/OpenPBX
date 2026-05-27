@@ -116,6 +116,7 @@ export default async function IvrPage() {
                   upsertAction={upsertIvrAction}
                   deleteAction={deleteIvrAction}
                   guidances={guidances}
+                  allMenus={menus}
                 />
               </li>
             ))}

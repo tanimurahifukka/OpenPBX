@@ -138,15 +138,32 @@ function RingGroupForm({ action, initial, submitLabel, deleteAction }: FormProps
           </ConfirmButton>
         )}
       </div>
-      <label className="text-xs text-slate-600 sm:col-span-6">
-        fallback 内線 (誰も応答しなかった時の転送先)
-        <input
-          name="fallbackExtension"
-          defaultValue={initial?.fallbackExtension ?? ''}
-          placeholder="任意。例: 9002 (折返し依頼にフォールバック)"
-          className="mt-1 w-full rounded border border-slate-300 px-2 py-1 font-mono text-sm"
-        />
-      </label>
+      <div className="grid grid-cols-1 gap-3 sm:col-span-6 sm:grid-cols-[200px_1fr]">
+        <label className="text-xs text-slate-600">
+          応答なし時
+          <select
+            name="fallbackAction"
+            defaultValue={initial?.fallbackAction ?? 'hangup'}
+            className="mt-1 w-full rounded border border-slate-300 px-2 py-1 text-sm"
+          >
+            <option value="hangup">切断</option>
+            <option value="goto_extension">内線へ転送</option>
+            <option value="goto_ivr">IVR へ転送</option>
+            <option value="goto_voicemail">留守番電話</option>
+          </select>
+        </label>
+        <label className="text-xs text-slate-600">
+          転送先番号
+          <input
+            name="fallbackTarget"
+            defaultValue={initial?.fallbackTarget ?? ''}
+            placeholder="例: 9100"
+            inputMode="numeric"
+            pattern="[0-9]{2,6}"
+            className="mt-1 w-full rounded border border-slate-300 px-2 py-1 font-mono text-sm"
+          />
+        </label>
+      </div>
     </form>
   );
 }

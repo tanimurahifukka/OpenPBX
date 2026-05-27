@@ -41,11 +41,13 @@ const IVR_ACTIONS: ReadonlyArray<IvrAction> = [
   'goto_extension',
   'goto_ringgroup',
   'goto_ivr',
+  'send_sms',
   'hangup',
 ];
 const AFTER_HOURS_ACTIONS: ReadonlyArray<AfterHoursAction> = [
   'goto_ivr',
   'goto_extension',
+  'goto_voicemail',
   'hangup',
 ];
 const CALLER_ID_ROUTE_ACTIONS: ReadonlyArray<CallerIdRouteAction> = [
@@ -57,6 +59,7 @@ const TARGET_REQUIRING_ACTIONS: ReadonlyArray<IvrAction> = [
   'goto_extension',
   'goto_ringgroup',
   'goto_ivr',
+  'send_sms',
 ];
 
 interface MenuRow {
@@ -186,8 +189,17 @@ function validate(i: UpsertIvrInput): void {
     if (seen.has(o.digit)) throw new InvalidIvrError(`digit が重複: ${o.digit}`);
     seen.add(o.digit);
     if (TARGET_REQUIRING_ACTIONS.includes(o.action)) {
-      if (!o.target || !NUMBER_RE.test(o.target)) {
+      if (!o.target) {
         throw new InvalidIvrError(`target が不正: ${o.target}`);
+      }
+      if (o.action === 'send_sms') {
+        if (!/^[a-z0-9_-]+$/.test(o.target)) {
+          throw new InvalidIvrError(`SMS テンプレートスラグが不正: ${o.target}`);
+        }
+      } else {
+        if (!NUMBER_RE.test(o.target)) {
+          throw new InvalidIvrError(`target が不正: ${o.target}`);
+        }
       }
     }
   }
@@ -195,9 +207,14 @@ function validate(i: UpsertIvrInput): void {
     if (!AFTER_HOURS_ACTIONS.includes(i.afterHoursAction)) {
       throw new InvalidIvrError(`after-hours action が不正: ${i.afterHoursAction}`);
     }
-    if (i.afterHoursAction !== 'hangup') {
+    if (i.afterHoursAction !== 'hangup' && i.afterHoursAction !== 'goto_voicemail') {
       if (!i.afterHoursTarget || !NUMBER_RE.test(i.afterHoursTarget)) {
         throw new InvalidIvrError(`after-hours target が不正: ${i.afterHoursTarget}`);
+      }
+    }
+    if (i.afterHoursAction === 'goto_voicemail') {
+      if (!i.afterHoursTarget || !NUMBER_RE.test(i.afterHoursTarget)) {
+        throw new InvalidIvrError(`voicemail メールボックスが不正: ${i.afterHoursTarget}`);
       }
     }
   }
@@ -307,6 +324,7 @@ function afterHoursTargetGoto(action: AfterHoursAction, target: string | null): 
   if (action === 'hangup') return null;
   if (action === 'goto_ivr' && target) return `Goto(ivr-${target},s,1)`;
   if (action === 'goto_extension' && target) return `Goto(internal,${target},1)`;
+  if (action === 'goto_voicemail' && target) return `VoiceMail(${target}@default,u)`;
   return null;
 }
 
@@ -328,10 +346,17 @@ function callerIdMatchExpr(pattern: string): string {
   return `$["\${CALLERID(num)}"="${pattern}"]`;
 }
 
-function optionGoto(opt: IvrOption): string | null {
-  if (opt.action === 'goto_extension' && opt.target) return `Goto(internal,${opt.target},1)`;
-  if (opt.action === 'goto_ringgroup' && opt.target) return `Goto(ringgroups,${opt.target},1)`;
-  if (opt.action === 'goto_ivr' && opt.target) return `Goto(ivr-${opt.target},s,1)`;
+function optionGoto(opt: IvrOption): string[] | null {
+  if (opt.action === 'goto_extension' && opt.target) return [`Goto(internal,${opt.target},1)`];
+  if (opt.action === 'goto_ringgroup' && opt.target) return [`Goto(ringgroups,${opt.target},1)`];
+  if (opt.action === 'goto_ivr' && opt.target) return [`Goto(ivr-${opt.target},s,1)`];
+  if (opt.action === 'send_sms' && opt.target) {
+    return [
+      `Set(SMS_TEMPLATE=${opt.target})`,
+      `System(/usr/local/bin/sms-send.sh \${CALLERID(num)} ${opt.target})`,
+      'Playback(custom/sms-sent)',
+    ];
+  }
   return null;
 }
 
@@ -379,9 +404,13 @@ export function renderIvrDialplan(menus: IvrMenu[] = listIvrMenus()): string {
 
     if (m.afterHoursAction) {
       lines.push(`exten => after-hours,1,NoOp(IVR ${m.number} after-hours: ${m.afterHoursAction})`);
-      const goto = afterHoursTargetGoto(m.afterHoursAction, m.afterHoursTarget);
-      if (goto) {
-        lines.push(` same => n,${goto}`);
+      const afterCmd = afterHoursTargetGoto(m.afterHoursAction, m.afterHoursTarget);
+      if (afterCmd) {
+        if (m.afterHoursAction === 'goto_voicemail' && m.goodbyePrompt) {
+          lines.push(` same => n,Playback(${m.goodbyePrompt})`);
+        }
+        lines.push(` same => n,${afterCmd}`);
+        lines.push(' same => n,Hangup()');
       } else {
         if (m.goodbyePrompt) lines.push(` same => n,Playback(${m.goodbyePrompt})`);
         lines.push(' same => n,Hangup()');
@@ -404,9 +433,11 @@ export function renderIvrDialplan(menus: IvrMenu[] = listIvrMenus()): string {
     for (const o of m.options) {
       lines.push(`; ${o.label ?? ''}`);
       lines.push(`exten => ${o.digit},1,NoOp(IVR ${m.number} option ${o.digit})`);
-      const goto = optionGoto(o);
-      if (goto) {
-        lines.push(` same => n,${goto}`);
+      const cmds = optionGoto(o);
+      if (cmds) {
+        for (const cmd of cmds) {
+          lines.push(` same => n,${cmd}`);
+        }
       } else {
         if (m.goodbyePrompt) lines.push(` same => n,Playback(${m.goodbyePrompt})`);
         lines.push(' same => n,Hangup()');

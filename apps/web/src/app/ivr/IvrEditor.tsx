@@ -45,6 +45,8 @@ interface Props {
   deleteAction?: (formData: FormData) => Promise<void>;
   /** 既存ガイダンス一覧。空配列のときは select は出さず raw input にフォールバック。 */
   guidances?: GuidanceChoice[];
+  /** ネスト表示用。goto_ivr の子メニューを展開表示するために全メニューを渡す。 */
+  allMenus?: IvrMenu[];
 }
 
 interface OptionDraft extends IvrOption {
@@ -55,6 +57,7 @@ const ACTION_OPTIONS: { value: IvrAction; label: string }[] = [
   { value: 'goto_extension', label: '内線へ転送' },
   { value: 'goto_ringgroup', label: '着信グループへ' },
   { value: 'goto_ivr', label: '別 IVR へ' },
+  { value: 'send_sms', label: 'SMS送信' },
   { value: 'hangup', label: '切断' },
 ];
 
@@ -77,6 +80,11 @@ const ACTION_META: Record<
     badgeClass: 'bg-sky-50 text-sky-700 ring-sky-200',
     helper: '別のIVRへ移動します',
   },
+  send_sms: {
+    shortLabel: 'SMS',
+    badgeClass: 'bg-blue-50 text-blue-700 ring-blue-200',
+    helper: '携帯番号へSMSを送信します',
+  },
   hangup: {
     shortLabel: '終了',
     badgeClass: 'bg-rose-50 text-rose-700 ring-rose-200',
@@ -88,6 +96,7 @@ const AFTER_HOURS_OPTIONS: { value: '' | AfterHoursAction; label: string }[] = [
   { value: '', label: '営業時間判定なし' },
   { value: 'goto_ivr', label: '別 IVR へ転送' },
   { value: 'goto_extension', label: '内線へ転送' },
+  { value: 'goto_voicemail', label: '留守番電話' },
   { value: 'hangup', label: '切断' },
 ];
 
@@ -151,10 +160,10 @@ function defaultOptions(): OptionDraft[] {
 }
 
 function actionNeedsTarget(action: IvrAction | CallerIdRouteAction | AfterHoursAction | ''): boolean {
-  return action === 'goto_extension' || action === 'goto_ringgroup' || action === 'goto_ivr';
+  return action === 'goto_extension' || action === 'goto_ringgroup' || action === 'goto_ivr' || action === 'send_sms' || action === 'goto_voicemail';
 }
 
-export function IvrEditor({ initial, upsertAction, deleteAction, guidances = [] }: Props) {
+export function IvrEditor({ initial, upsertAction, deleteAction, guidances = [], allMenus = [] }: Props) {
   const formId = useId();
   const isEdit = !!initial;
   const [options, setOptions] = useState<OptionDraft[]>(
@@ -385,6 +394,8 @@ export function IvrEditor({ initial, upsertAction, deleteAction, guidances = [] 
                           option={o}
                           onChange={(patch) => update(o.uid, patch)}
                           onRemove={() => remove(o.uid)}
+                          allMenus={allMenus}
+                          visitedMenuNumbers={new Set(initial?.number ? [initial.number] : [])}
                         />
                       ))}
                     </ul>
@@ -861,9 +872,11 @@ interface CardProps {
   option: OptionDraft;
   onChange: (patch: Partial<IvrOption>) => void;
   onRemove: () => void;
+  allMenus?: IvrMenu[];
+  visitedMenuNumbers?: Set<string>;
 }
 
-function SortableOptionCard({ index, option, onChange, onRemove }: CardProps) {
+function SortableOptionCard({ index, option, onChange, onRemove, allMenus = [], visitedMenuNumbers = new Set() }: CardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: option.uid,
   });
@@ -874,6 +887,13 @@ function SortableOptionCard({ index, option, onChange, onRemove }: CardProps) {
   };
   const needsTarget = actionNeedsTarget(option.action);
   const meta = ACTION_META[option.action];
+
+  const childMenu =
+    option.action === 'goto_ivr' && option.target
+      ? allMenus.find((m) => m.number === option.target)
+      : undefined;
+  const hasChildren = !!childMenu && !visitedMenuNumbers.has(option.target!);
+  const [expanded, setExpanded] = useState(false);
 
   return (
     <li
@@ -931,14 +951,14 @@ function SortableOptionCard({ index, option, onChange, onRemove }: CardProps) {
         </label>
 
         <label className={`${labelClass} block`}>
-          転送先
+          {option.action === 'send_sms' ? 'テンプレート' : '転送先'}
           <input
             value={option.target ?? ''}
             onChange={(e) => onChange({ target: e.target.value || null })}
             disabled={!needsTarget}
-            inputMode="numeric"
-            pattern="[0-9]{2,6}"
-            placeholder={needsTarget ? '1001' : '-'}
+            inputMode={option.action === 'send_sms' ? 'text' : 'numeric'}
+            pattern={option.action === 'send_sms' ? '[a-z0-9_-]+' : '[0-9]{2,6}'}
+            placeholder={option.action === 'send_sms' ? 'same-day-booking' : needsTarget ? '1001' : '-'}
             className={`${fieldClass} font-mono`}
           />
         </label>
@@ -952,12 +972,142 @@ function SortableOptionCard({ index, option, onChange, onRemove }: CardProps) {
           ×
         </button>
       </div>
-      <div className="border-t border-slate-100 px-3 py-2">
+      <div className="border-t border-slate-100 px-3 py-2 flex items-center gap-2">
         <span className={`inline-flex items-center rounded-full px-2 py-1 text-[10px] font-bold ring-1 ${meta.badgeClass}`}>
           {meta.shortLabel}
         </span>
-        <span className="ml-2 text-[11px] text-slate-500">{meta.helper}</span>
+        <span className="text-[11px] text-slate-500">{meta.helper}</span>
+        {hasChildren && (
+          <button
+            type="button"
+            onClick={() => setExpanded((prev) => !prev)}
+            className="ml-auto inline-flex items-center gap-1 rounded-md border border-sky-200 bg-sky-50 px-2.5 py-1 text-[11px] font-bold text-sky-700 transition hover:bg-sky-100"
+          >
+            <span className="text-[10px]">{expanded ? '▼' : '▶'}</span>
+            {childMenu!.name || `IVR ${childMenu!.number}`}
+            {!expanded && (
+              <span className="rounded-full bg-sky-200 px-1.5 py-0.5 text-[10px] font-bold text-sky-800">
+                {childMenu!.options.length}件
+              </span>
+            )}
+          </button>
+        )}
+        {option.action === 'goto_ivr' && option.target && !childMenu && (
+          <span className="ml-auto text-[10px] text-slate-400">IVR {option.target}</span>
+        )}
+        {option.action === 'goto_ivr' && option.target && childMenu && visitedMenuNumbers.has(option.target) && (
+          <span className="ml-auto text-[10px] text-amber-600">循環参照</span>
+        )}
       </div>
+      {hasChildren && expanded && (
+        <NestedIvrOptions
+          menu={childMenu!}
+          allMenus={allMenus}
+          visitedMenuNumbers={visitedMenuNumbers}
+        />
+      )}
+    </li>
+  );
+}
+
+function NestedIvrOptions({
+  menu,
+  allMenus,
+  visitedMenuNumbers,
+}: {
+  menu: IvrMenu;
+  allMenus: IvrMenu[];
+  visitedMenuNumbers: Set<string>;
+}) {
+  const nextVisited = useMemo(() => {
+    const s = new Set(visitedMenuNumbers);
+    s.add(menu.number);
+    return s;
+  }, [visitedMenuNumbers, menu.number]);
+
+  return (
+    <div className="border-t border-sky-100 bg-sky-50/40 px-3 py-2">
+      <ul className="space-y-1.5">
+        {menu.options.map((opt, i) => {
+          const childMenu =
+            opt.action === 'goto_ivr' && opt.target
+              ? allMenus.find((m) => m.number === opt.target)
+              : undefined;
+          const hasGrandchildren = !!childMenu && !nextVisited.has(opt.target!);
+          return (
+            <NestedOptionCard
+              key={`${menu.number}-${opt.digit}-${i}`}
+              option={opt}
+              childMenu={hasGrandchildren ? childMenu : undefined}
+              allMenus={allMenus}
+              visitedMenuNumbers={nextVisited}
+            />
+          );
+        })}
+        {menu.options.length === 0 && (
+          <li className="text-[11px] text-slate-400 py-1">分岐なし</li>
+        )}
+      </ul>
+    </div>
+  );
+}
+
+function NestedOptionCard({
+  option,
+  childMenu,
+  allMenus,
+  visitedMenuNumbers,
+}: {
+  option: IvrOption;
+  childMenu?: IvrMenu;
+  allMenus: IvrMenu[];
+  visitedMenuNumbers: Set<string>;
+}) {
+  const meta = ACTION_META[option.action];
+  const [expanded, setExpanded] = useState(false);
+  const targetDisplay =
+    option.action === 'hangup'
+      ? ''
+      : option.target
+        ? `→ ${option.target}`
+        : '';
+
+  return (
+    <li className="rounded-md border border-slate-200 bg-white">
+      <div className="flex items-center gap-2 px-3 py-2">
+        <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-600 font-mono text-[10px] font-bold text-white">
+          {option.digit}
+        </span>
+        <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold ring-1 ${meta.badgeClass}`}>
+          {meta.shortLabel}
+        </span>
+        <span className="text-[11px] text-slate-700 truncate">
+          {option.label && <span className="font-semibold">{option.label} </span>}
+          {targetDisplay && <span className="font-mono text-slate-500">{targetDisplay}</span>}
+        </span>
+        {childMenu && (
+          <button
+            type="button"
+            onClick={() => setExpanded((prev) => !prev)}
+            className="ml-auto inline-flex items-center gap-1 rounded-md border border-sky-200 bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-700 transition hover:bg-sky-100"
+          >
+            <span>{expanded ? '▼' : '▶'}</span>
+            {childMenu.name || `IVR ${childMenu.number}`}
+            {!expanded && (
+              <span className="rounded-full bg-sky-200 px-1.5 py-0.5 text-[9px] font-bold text-sky-800">
+                {childMenu.options.length}件
+              </span>
+            )}
+          </button>
+        )}
+      </div>
+      {childMenu && expanded && (
+        <NestedIvrOptions
+          menu={childMenu}
+          allMenus={allMenus}
+          visitedMenuNumbers={visitedMenuNumbers}
+        />
+      )}
     </li>
   );
 }

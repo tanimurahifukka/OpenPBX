@@ -183,4 +183,50 @@ describe('renderIvrDialplan', () => {
     expect(out).not.toContain('CALLERID(num)');
     expect(out).not.toContain('exten => cid-');
   });
+
+  it('after-hours goto_voicemail emits VoiceMail application', () => {
+    const out = renderIvrDialplan([
+      fixtureMenu({ afterHoursAction: 'goto_voicemail', afterHoursTarget: '1001' }),
+    ]);
+    expect(out).toContain('VoiceMail(1001@default,u)');
+    expect(out).toContain('Hangup()');
+  });
+
+  it('after-hours goto_voicemail plays goodbye prompt before voicemail', () => {
+    const out = renderIvrDialplan([
+      fixtureMenu({
+        afterHoursAction: 'goto_voicemail',
+        afterHoursTarget: '1001',
+        goodbyePrompt: 'custom/ivr-goodbye',
+      }),
+    ]);
+    const lines = out.split('\n');
+    const goodbyeIdx = lines.findIndex((l) => l.includes('Playback(custom/ivr-goodbye)'));
+    const vmIdx = lines.findIndex((l) => l.includes('VoiceMail(1001@default,u)'));
+    expect(goodbyeIdx).toBeGreaterThan(-1);
+    expect(vmIdx).toBeGreaterThan(goodbyeIdx);
+  });
+
+  it('send_sms option emits System call to sms-send.sh', () => {
+    const out = renderIvrDialplan([
+      fixtureMenu({
+        options: [
+          { digit: '1', action: 'send_sms', target: 'same-day-booking', label: '当日予約SMS' },
+        ],
+      }),
+    ]);
+    expect(out).toContain('System(/usr/local/bin/sms-send.sh ${CALLERID(num)} same-day-booking)');
+    expect(out).toContain('Playback(custom/sms-sent)');
+  });
+
+  it('send_sms option sets SMS_TEMPLATE variable', () => {
+    const out = renderIvrDialplan([
+      fixtureMenu({
+        options: [
+          { digit: '1', action: 'send_sms', target: 'callback-confirm', label: null },
+        ],
+      }),
+    ]);
+    expect(out).toContain('Set(SMS_TEMPLATE=callback-confirm)');
+  });
 });

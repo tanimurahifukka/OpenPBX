@@ -24,8 +24,11 @@ services:
       - ./asterisk/cdr.conf:/etc/asterisk/cdr.conf:ro
       - ./asterisk/http.conf:/etc/asterisk/http.conf:ro
       - ./asterisk/certs:/etc/asterisk/certs:ro
+      - ./asterisk/voicemail.conf:/etc/asterisk/voicemail.conf:ro
       - ./asterisk/notify-event.sh:/usr/local/bin/notify-event.sh:ro
+      - ./asterisk/sms-send.sh:/usr/local/bin/sms-send.sh:ro
       - ./asterisk/entrypoint.sh:/usr/local/bin/entrypoint.sh:ro
+      - ./data/voicemail:/var/spool/asterisk/voicemail
       - ./asterisk/sounds/custom:/var/lib/asterisk/sounds/custom:ro
       - ./data/recordings:/var/spool/asterisk/monitor
       - ./data/signals:/signals
@@ -33,6 +36,8 @@ services:
       - ./data/asterisk-cdr:/var/log/asterisk/cdr-csv
     environment:
       INBOX_DIR: /inbox
+      SMS_HOST_AGENT_URL: ${SMS_HOST_AGENT_URL:-http://host.docker.internal:7890}
+      SMS_HOST_AGENT_TOKEN: ${SMS_HOST_AGENT_TOKEN:-}
       # entrypoint.sh が manager.conf.template の __AMI_SECRET__ をこの値で置換して生成する。
       AMI_SECRET: ${AMI_SECRET:?AMI_SECRET must be set in .env}
     command: ["/usr/local/bin/entrypoint.sh"]
