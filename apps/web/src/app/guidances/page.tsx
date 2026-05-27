@@ -97,35 +97,35 @@ export default async function GuidancesPage({ searchParams }: PageProps) {
           method="post"
           action="/api/guidances"
           encType="multipart/form-data"
-          className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_auto]"
+          className="space-y-3"
         >
-          <label className="text-xs text-slate-600">
-            name (拡張子なし、例: custom/ivr-welcome)
-            <input
-              name="name"
-              required
-              pattern="[A-Za-z0-9_/-]{1,80}"
-              className="mt-1 w-full rounded border border-slate-300 px-2 py-1 font-mono text-sm"
-            />
-          </label>
-          <label className="text-xs text-slate-600">
-            wav ファイル
-            <input
-              type="file"
-              name="file"
-              accept="audio/wav,.wav"
-              required
-              className="mt-1 w-full rounded border border-slate-300 px-2 py-1 text-sm"
-            />
-          </label>
-          <div className="flex items-end">
-            <button
-              type="submit"
-              className="rounded bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary-500"
-            >
-              アップロード
-            </button>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <label className="text-xs text-slate-600">
+              name (拡張子なし、例: custom/ivr-welcome)
+              <input
+                name="name"
+                required
+                pattern="[A-Za-z0-9_/-]{1,80}"
+                className="mt-1 w-full rounded border border-slate-300 px-2 py-1 font-mono text-sm"
+              />
+            </label>
+            <label className="text-xs text-slate-600">
+              wav ファイル
+              <input
+                type="file"
+                name="file"
+                accept="audio/wav,.wav"
+                required
+                className="mt-1 w-full rounded border border-slate-300 px-2 py-1 text-sm"
+              />
+            </label>
           </div>
+          <button
+            type="submit"
+            className="rounded bg-primary px-4 py-2 text-xs font-semibold text-white hover:bg-primary-500"
+          >
+            アップロード
+          </button>
         </form>
         <p className="mt-2 text-xs text-slate-500">
           ホスト Mac で <code className="rounded bg-slate-100 px-1">./host-tts/make-prompts.sh</code> を実行すれば、
