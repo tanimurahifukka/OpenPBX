@@ -85,6 +85,8 @@ function PickupForm({ action, initial, submitLabel, deleteAction }: Props) {
           name="members"
           defaultValue={initial?.members.join(',') ?? ''}
           placeholder="例: 1001,1002,1003"
+          pattern="[0-9,\s]*"
+          title="カンマ区切りの内線番号"
           className="mt-1 w-full rounded border border-slate-300 px-2 py-1 font-mono text-sm"
         />
       </label>

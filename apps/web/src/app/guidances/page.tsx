@@ -93,6 +93,7 @@ export default async function GuidancesPage({ searchParams }: PageProps) {
 
       <section className="rounded-lg border border-slate-200 bg-white p-4">
         <h3 className="mb-3 text-sm font-semibold text-slate-700">wav アップロード</h3>
+        <p className="mb-2 text-[11px] text-slate-500">同じ name で再アップロードすると上書きされます。</p>
         <form
           method="post"
           action="/api/guidances"
@@ -122,7 +123,7 @@ export default async function GuidancesPage({ searchParams }: PageProps) {
           </div>
           <button
             type="submit"
-            className="rounded-md bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-blue-700"
+            className="rounded bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700"
           >
             アップロード
           </button>

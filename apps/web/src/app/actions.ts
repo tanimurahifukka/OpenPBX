@@ -86,6 +86,16 @@ import {
 } from '@/lib/trunks';
 import { scheduleUpgrade, deleteUpgrade } from '@/lib/upgrades';
 import { updateNetworkSettings } from '@/lib/network';
+import {
+  createBox as createVmBox,
+  updateBox as updateVmBox,
+  deleteBox as deleteVmBox,
+  getBox as getVmBox,
+  updateMessageStatus as updateVmMsgStatus,
+  deleteMessage as deleteVmMsg,
+  writeVoicemailDialplanAndReload,
+  type VmMessageStatus,
+} from '@/lib/voicemail';
 function s(v: FormDataEntryValue | null): string {
   return typeof v === 'string' ? v.trim() : '';
 }
@@ -171,6 +181,8 @@ export async function createRingGroupAction(formData: FormData): Promise<void> {
       strategy: asStrategy(formData.get('strategy')),
       ringSeconds: Number(formData.get('ringSeconds')) || 30,
       fallbackExtension: s(formData.get('fallbackExtension')) || undefined,
+      fallbackAction: (s(formData.get('fallbackAction')) || 'hangup') as 'goto_extension' | 'goto_ivr' | 'goto_voicemail' | 'hangup',
+      fallbackTarget: s(formData.get('fallbackTarget')) || null,
       members: parseMembers(formData.get('members')),
     });
     await writeRingGroupDialplanAndReload();
@@ -186,6 +198,8 @@ export async function updateRingGroupAction(formData: FormData): Promise<void> {
       strategy: asStrategy(formData.get('strategy')),
       ringSeconds: Number(formData.get('ringSeconds')) || 30,
       fallbackExtension: s(formData.get('fallbackExtension')) || undefined,
+      fallbackAction: (s(formData.get('fallbackAction')) || 'hangup') as 'goto_extension' | 'goto_ivr' | 'goto_voicemail' | 'hangup',
+      fallbackTarget: s(formData.get('fallbackTarget')) || null,
       members: parseMembers(formData.get('members')),
     });
     await writeRingGroupDialplanAndReload();
@@ -351,7 +365,7 @@ export async function upsertIvrAction(formData: FormData): Promise<void> {
     const number = s(formData.get('number'));
     const afterHoursRaw = s(formData.get('afterHoursAction'));
     const afterHoursAction: AfterHoursAction | null =
-      afterHoursRaw === 'goto_ivr' || afterHoursRaw === 'goto_extension' || afterHoursRaw === 'hangup'
+      afterHoursRaw === 'goto_ivr' || afterHoursRaw === 'goto_extension' || afterHoursRaw === 'goto_voicemail' || afterHoursRaw === 'hangup'
         ? afterHoursRaw
         : null;
     const input = {
@@ -713,5 +727,52 @@ export async function deleteUpgradeAction(formData: FormData): Promise<void> {
     const id = Number(formData.get('id'));
     deleteUpgrade(id);
     recordAudit({ actor: me.username, action: 'upgrade.delete', target: String(id) });
+  });
+}
+
+// ---- Voicemail ----
+export async function upsertVoicemailBoxAction(formData: FormData): Promise<void> {
+  await flash('/voicemail', '留守電ボックスを保存しました', async () => {
+    await requireRole('admin');
+    const number = s(formData.get('number'));
+    const input = {
+      number,
+      name: s(formData.get('name')) || undefined,
+      prompt: s(formData.get('prompt')) || undefined,
+    };
+    if (getVmBox(number)) {
+      updateVmBox(input);
+    } else {
+      createVmBox(input);
+    }
+    await writeVoicemailDialplanAndReload();
+  });
+}
+
+export async function deleteVoicemailBoxAction(formData: FormData): Promise<void> {
+  await flash('/voicemail', '留守電ボックスを削除しました', async () => {
+    await requireRole('admin');
+    const number = s(formData.get('number'));
+    if (!number) throw new Error('番号が指定されていません');
+    deleteVmBox(number);
+    await writeVoicemailDialplanAndReload();
+  });
+}
+
+export async function updateVoicemailMessageAction(formData: FormData): Promise<void> {
+  await flash('/voicemail', 'ステータスを更新しました', async () => {
+    await requireAccount();
+    const id = Number(formData.get('id'));
+    const status = s(formData.get('status')) as VmMessageStatus;
+    if (!['new', 'read', 'callback_done'].includes(status)) throw new Error('status が不正');
+    updateVmMsgStatus(id, status);
+  });
+}
+
+export async function deleteVoicemailMessageAction(formData: FormData): Promise<void> {
+  await flash('/voicemail', '留守電を削除しました', async () => {
+    await requireRole('admin');
+    const id = Number(formData.get('id'));
+    deleteVmMsg(id);
   });
 }

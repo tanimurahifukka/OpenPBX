@@ -3,6 +3,7 @@ import { getDb } from './db';
 import { writeDialplanFile, signalAsteriskReload } from './dialplan';
 
 export type RingStrategy = 'ringall' | 'linear';
+export type FallbackAction = 'goto_extension' | 'goto_ivr' | 'goto_voicemail' | 'hangup';
 
 export interface RingGroup {
   id: number;
@@ -11,7 +12,9 @@ export interface RingGroup {
   strategy: RingStrategy;
   ringSeconds: number;
   fallbackExtension: string | null;
-  members: string[]; // 内線番号 (priority 順)
+  fallbackAction: FallbackAction;
+  fallbackTarget: string | null;
+  members: string[];
   updatedAt: string;
 }
 
@@ -20,6 +23,8 @@ export class InvalidRingGroupError extends Error {}
 const NUMBER_RE = /^[0-9]{2,6}$/;
 const STRATEGIES = new Set<RingStrategy>(['ringall', 'linear']);
 
+const FALLBACK_ACTIONS: ReadonlyArray<FallbackAction> = ['goto_extension', 'goto_ivr', 'goto_voicemail', 'hangup'];
+
 interface Row {
   id: number;
   number: string;
@@ -27,6 +32,8 @@ interface Row {
   strategy: RingStrategy;
   ring_seconds: number;
   fallback_extension: string | null;
+  fallback_action: FallbackAction | null;
+  fallback_target: string | null;
   updated_at: string;
 }
 
@@ -41,6 +48,15 @@ function getMembers(id: number, db: Database.Database): string[] {
 }
 
 function rowToGroup(r: Row, db: Database.Database): RingGroup {
+  let fallbackAction: FallbackAction = 'hangup';
+  let fallbackTarget: string | null = null;
+  if (r.fallback_action && FALLBACK_ACTIONS.includes(r.fallback_action)) {
+    fallbackAction = r.fallback_action;
+    fallbackTarget = r.fallback_target;
+  } else if (r.fallback_extension) {
+    fallbackAction = 'goto_extension';
+    fallbackTarget = r.fallback_extension;
+  }
   return {
     id: r.id,
     number: r.number,
@@ -48,6 +64,8 @@ function rowToGroup(r: Row, db: Database.Database): RingGroup {
     strategy: r.strategy,
     ringSeconds: r.ring_seconds,
     fallbackExtension: r.fallback_extension,
+    fallbackAction,
+    fallbackTarget,
     members: getMembers(r.id, db),
     updatedAt: r.updated_at,
   };
@@ -56,7 +74,7 @@ function rowToGroup(r: Row, db: Database.Database): RingGroup {
 export function listRingGroups(db: Database.Database = getDb()): RingGroup[] {
   const rows = db
     .prepare(
-      'SELECT id, number, name, strategy, ring_seconds, fallback_extension, updated_at FROM ring_groups ORDER BY number',
+      'SELECT id, number, name, strategy, ring_seconds, fallback_extension, fallback_action, fallback_target, updated_at FROM ring_groups ORDER BY number',
     )
     .all() as Row[];
   return rows.map((r) => rowToGroup(r, db));
@@ -65,7 +83,7 @@ export function listRingGroups(db: Database.Database = getDb()): RingGroup[] {
 export function getRingGroup(number: string, db: Database.Database = getDb()): RingGroup | null {
   const row = db
     .prepare(
-      'SELECT id, number, name, strategy, ring_seconds, fallback_extension, updated_at FROM ring_groups WHERE number = ?',
+      'SELECT id, number, name, strategy, ring_seconds, fallback_extension, fallback_action, fallback_target, updated_at FROM ring_groups WHERE number = ?',
     )
     .get(number) as Row | undefined;
   return row ? rowToGroup(row, db) : null;
@@ -77,6 +95,8 @@ export interface UpsertRingGroupInput {
   strategy?: RingStrategy;
   ringSeconds?: number;
   fallbackExtension?: string;
+  fallbackAction?: FallbackAction;
+  fallbackTarget?: string | null;
   members?: string[];
 }
 
@@ -98,6 +118,13 @@ function validate(input: UpsertRingGroupInput): void {
   if (input.fallbackExtension && !NUMBER_RE.test(input.fallbackExtension)) {
     throw new InvalidRingGroupError('fallback も内線番号形式');
   }
+  const fa = input.fallbackAction ?? 'hangup';
+  if (!FALLBACK_ACTIONS.includes(fa)) {
+    throw new InvalidRingGroupError(`未知の fallback action: ${fa}`);
+  }
+  if (fa !== 'hangup' && input.fallbackTarget && !NUMBER_RE.test(input.fallbackTarget)) {
+    throw new InvalidRingGroupError('fallback target は番号形式');
+  }
 }
 
 export function createRingGroup(input: UpsertRingGroupInput, db: Database.Database = getDb()): RingGroup {
@@ -107,8 +134,8 @@ export function createRingGroup(input: UpsertRingGroupInput, db: Database.Databa
   }
   const info = db
     .prepare(
-      `INSERT INTO ring_groups (number, name, strategy, ring_seconds, fallback_extension, updated_at)
-       VALUES (?, ?, ?, ?, ?, datetime('now'))`,
+      `INSERT INTO ring_groups (number, name, strategy, ring_seconds, fallback_extension, fallback_action, fallback_target, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
     )
     .run(
       input.number,
@@ -116,6 +143,8 @@ export function createRingGroup(input: UpsertRingGroupInput, db: Database.Databa
       input.strategy ?? 'ringall',
       input.ringSeconds ?? 30,
       input.fallbackExtension ?? null,
+      input.fallbackAction ?? null,
+      input.fallbackTarget ?? null,
     );
   const id = Number(info.lastInsertRowid);
   replaceMembers(id, input.members ?? [], db);
@@ -128,13 +157,15 @@ export function updateRingGroup(input: UpsertRingGroupInput, db: Database.Databa
   if (!existing) throw new InvalidRingGroupError(`着信グループ ${input.number} は存在しません`);
   db.prepare(
     `UPDATE ring_groups
-        SET name = ?, strategy = ?, ring_seconds = ?, fallback_extension = ?, updated_at = datetime('now')
+        SET name = ?, strategy = ?, ring_seconds = ?, fallback_extension = ?, fallback_action = ?, fallback_target = ?, updated_at = datetime('now')
       WHERE id = ?`,
   ).run(
     input.name ?? null,
     input.strategy ?? 'ringall',
     input.ringSeconds ?? 30,
     input.fallbackExtension ?? null,
+    input.fallbackAction ?? null,
+    input.fallbackTarget ?? null,
     existing.id,
   );
   if (input.members !== undefined) replaceMembers(existing.id, input.members, db);
@@ -155,6 +186,15 @@ function replaceMembers(groupId: number, members: string[], db: Database.Databas
     m.forEach((n, i) => ins.run(groupId, n, i));
   });
   tx(members);
+}
+
+function fallbackDialplan(g: RingGroup): string[] {
+  const action = g.fallbackAction;
+  const target = g.fallbackTarget;
+  if (action === 'goto_extension' && target) return [`Goto(internal,${target},1)`];
+  if (action === 'goto_ivr' && target) return [`Goto(ivr-${target},s,1)`];
+  if (action === 'goto_voicemail' && target) return [`VoiceMail(${target}@default,u)`, 'Hangup()'];
+  return ['Hangup()'];
 }
 
 // dialplan.d/ringgroups.conf を全グループから再生成する。
@@ -180,22 +220,15 @@ export function renderRingGroupDialplan(groups: RingGroup[]): string {
       const dialString = g.members.map((m) => `PJSIP/${m}`).join('&');
       lines.push(`exten => ${g.number},1,NoOp(ring group ${g.number} ringall)`);
       lines.push(` same => n,Dial(${dialString},${g.ringSeconds},tTm)`);
-      if (g.fallbackExtension) {
-        lines.push(` same => n,Goto(internal,${g.fallbackExtension},1)`);
-      } else {
-        lines.push(' same => n,Hangup()');
-      }
     } else {
-      // linear: メンバーを順次呼出し
       lines.push(`exten => ${g.number},1,NoOp(ring group ${g.number} linear)`);
       g.members.forEach((m) => {
         lines.push(` same => n,Dial(PJSIP/${m},${g.ringSeconds},tTm)`);
       });
-      if (g.fallbackExtension) {
-        lines.push(` same => n,Goto(internal,${g.fallbackExtension},1)`);
-      } else {
-        lines.push(' same => n,Hangup()');
-      }
+    }
+    const fb = fallbackDialplan(g);
+    for (const cmd of fb) {
+      lines.push(` same => n,${cmd}`);
     }
     lines.push('');
   }

@@ -2,9 +2,9 @@
 // クライアントコンポーネントからも安全に import できるよう、ここでは DB / next/headers
 // 等のサーバ専用モジュールに依存しない。
 
-export type IvrAction = 'goto_extension' | 'goto_ringgroup' | 'goto_ivr' | 'hangup';
+export type IvrAction = 'goto_extension' | 'goto_ringgroup' | 'goto_ivr' | 'send_sms' | 'hangup';
 
-export type AfterHoursAction = 'goto_ivr' | 'goto_extension' | 'hangup';
+export type AfterHoursAction = 'goto_ivr' | 'goto_extension' | 'goto_voicemail' | 'hangup';
 
 export type CallerIdRouteAction = 'goto_ivr' | 'goto_extension' | 'hangup';
 
