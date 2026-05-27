@@ -118,6 +118,8 @@ function RingGroupForm({ action, initial, submitLabel, deleteAction }: FormProps
           name="members"
           defaultValue={initial?.members.join(',') ?? ''}
           placeholder="例: 1001,1002,1003"
+          pattern="[0-9,\s]*"
+          title="カンマ区切りの内線番号"
           className="mt-1 w-full rounded border border-slate-300 px-2 py-1 font-mono text-sm"
         />
       </label>
@@ -153,11 +155,11 @@ function RingGroupForm({ action, initial, submitLabel, deleteAction }: FormProps
           </select>
         </label>
         <label className="text-xs text-slate-600">
-          転送先番号
+          転送先番号（切断以外は必須）
           <input
             name="fallbackTarget"
             defaultValue={initial?.fallbackTarget ?? ''}
-            placeholder="例: 9100"
+            placeholder="例: 9100（切断以外は入力必須）"
             inputMode="numeric"
             pattern="[0-9]{2,6}"
             className="mt-1 w-full rounded border border-slate-300 px-2 py-1 font-mono text-sm"

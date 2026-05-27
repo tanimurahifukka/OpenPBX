@@ -1,5 +1,5 @@
 import { requireAccount } from '@/lib/auth';
-import { listBoxes, listMessages, countByStatus, type VmMessageStatus } from '@/lib/voicemail';
+import { listBoxes, listMessages, countByStatus, type VmMessageStatus, type VoicemailBox } from '@/lib/voicemail';
 import { formatJst } from '@/lib/datetime';
 import {
   upsertVoicemailBoxAction,
@@ -26,7 +26,7 @@ const STATUS_BADGE: Record<VmMessageStatus, string> = {
 export default async function VoicemailPage({
   searchParams,
 }: {
-  searchParams: Promise<{ ok?: string; err?: string; status?: string }>;
+  searchParams: Promise<{ status?: string }>;
 }) {
   await requireAccount();
   const params = await searchParams;
@@ -42,13 +42,6 @@ export default async function VoicemailPage({
         <h2 className="text-lg font-semibold">留守番電話</h2>
         <p className="text-xs text-slate-500">留守電ボックスの管理とメッセージ一覧</p>
       </header>
-
-      {params.ok && (
-        <div className="rounded-md bg-emerald-50 px-4 py-2 text-sm text-emerald-800">{params.ok}</div>
-      )}
-      {params.err && (
-        <div className="rounded-md bg-red-50 px-4 py-2 text-sm text-red-800">{params.err}</div>
-      )}
 
       {/* Summary */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -96,25 +89,20 @@ export default async function VoicemailPage({
                   />
                 )}
 
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {m.status === 'new' && (
-                    <form action={updateVoicemailMessageAction}>
-                      <input type="hidden" name="id" value={m.id} />
-                      <input type="hidden" name="status" value="read" />
-                      <button type="submit" className="rounded-md border border-yellow-200 bg-yellow-50 px-3 py-1 text-xs font-semibold text-yellow-700 hover:bg-yellow-100">
-                        確認済みにする
-                      </button>
-                    </form>
-                  )}
-                  {(m.status === 'new' || m.status === 'read') && (
-                    <form action={updateVoicemailMessageAction}>
-                      <input type="hidden" name="id" value={m.id} />
-                      <input type="hidden" name="status" value="callback_done" />
-                      <button type="submit" className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100">
-                        折返し済みにする
-                      </button>
-                    </form>
-                  )}
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <form action={updateVoicemailMessageAction} className="flex items-center gap-2">
+                    <input type="hidden" name="id" value={m.id} />
+                    <select name="status" defaultValue={m.status}
+                      className="rounded-md border border-slate-200 px-2 py-1 text-xs">
+                      <option value="new">未確認</option>
+                      <option value="read">確認済み</option>
+                      <option value="callback_done">折返し済み</option>
+                    </select>
+                    <button type="submit"
+                      className="rounded-md border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+                      変更
+                    </button>
+                  </form>
                   <form action={deleteVoicemailMessageAction}>
                     <input type="hidden" name="id" value={m.id} />
                     <ConfirmButton
@@ -134,68 +122,30 @@ export default async function VoicemailPage({
       {/* Box management */}
       <section>
         <h3 className="mb-2 text-sm font-semibold text-slate-700">留守電ボックス管理</h3>
-        <div className="space-y-3">
-          {boxes.map((box) => (
-            <div key={box.id} className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3">
-              <div className="min-w-0 flex-1">
-                <p className="font-mono text-sm font-bold">{box.number}</p>
-                <p className="truncate text-xs text-slate-500">{box.name || '(名前なし)'}</p>
-                {box.prompt && <p className="text-[11px] text-slate-400">音声: {box.prompt}</p>}
-              </div>
-              <form action={deleteVoicemailBoxAction}>
-                <input type="hidden" name="number" value={box.number} />
-                <ConfirmButton
-                  confirmText={`留守電 ${box.number} を削除しますか？`}
-                  className="rounded-md border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
-                >
-                  削除
-                </ConfirmButton>
-              </form>
-            </div>
-          ))}
 
-          <details className="rounded-lg border border-slate-200 bg-white p-4">
-            <summary className="cursor-pointer text-xs font-bold text-slate-700">
-              + 留守電ボックスを追加
-            </summary>
-            <form action={upsertVoicemailBoxAction} className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <label className="text-[11px] font-semibold text-slate-500">
-                番号
-                <input
-                  name="number"
-                  required
-                  pattern="[0-9]{2,6}"
-                  placeholder="9100"
-                  className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 font-mono text-sm shadow-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-                />
-              </label>
-              <label className="text-[11px] font-semibold text-slate-500">
-                名前
-                <input
-                  name="name"
-                  placeholder="代表留守電"
-                  className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm shadow-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-                />
-              </label>
-              <label className="text-[11px] font-semibold text-slate-500">
-                音声ガイダンス
-                <input
-                  name="prompt"
-                  placeholder="custom/vm-intro"
-                  className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 font-mono text-sm shadow-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-                />
-              </label>
-              <div className="sm:col-span-3">
-                <button
-                  type="submit"
-                  className="rounded-md bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-500"
-                >
-                  追加
-                </button>
-              </div>
-            </form>
-          </details>
+        <div className="mb-3 rounded-lg border border-slate-200 bg-white p-4">
+          <p className="mb-3 text-xs font-semibold text-slate-700">新規追加</p>
+          <VmBoxForm action={upsertVoicemailBoxAction} submitLabel="追加" />
         </div>
+
+        {boxes.length === 0 ? (
+          <p className="rounded-lg border border-dashed border-slate-300 bg-white p-4 text-center text-sm text-slate-500">
+            まだ留守電ボックスがありません。
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {boxes.map((box) => (
+              <div key={box.id} className="rounded-lg border border-slate-200 bg-white p-3">
+                <VmBoxForm
+                  action={upsertVoicemailBoxAction}
+                  initial={box}
+                  submitLabel="保存"
+                  deleteAction={deleteVoicemailBoxAction}
+                />
+              </div>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
@@ -222,5 +172,49 @@ function StatCard({
       <p className={`font-mono text-2xl font-bold ${accent ?? 'text-slate-900'}`}>{value}</p>
       <p className="text-[11px] font-semibold text-slate-500">{label}</p>
     </a>
+  );
+}
+
+const fClass = 'mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm shadow-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100';
+
+function VmBoxForm({
+  action,
+  initial,
+  submitLabel,
+  deleteAction,
+}: {
+  action: (formData: FormData) => Promise<void>;
+  initial?: VoicemailBox;
+  submitLabel: string;
+  deleteAction?: (formData: FormData) => Promise<void>;
+}) {
+  const isEdit = !!initial;
+  return (
+    <form action={action} className="grid grid-cols-1 gap-3 sm:grid-cols-[120px_1fr_1fr_auto]">
+      <label className="text-[11px] font-semibold text-slate-500">
+        番号
+        <input name="number" required pattern="[0-9]{2,6}" defaultValue={initial?.number ?? ''}
+          readOnly={isEdit} placeholder="9100" className={`${fClass} font-mono ${isEdit ? 'bg-slate-100' : ''}`} />
+      </label>
+      <label className="text-[11px] font-semibold text-slate-500">
+        名前
+        <input name="name" defaultValue={initial?.name ?? ''} placeholder="代表留守電" className={fClass} />
+      </label>
+      <label className="text-[11px] font-semibold text-slate-500">
+        音声ガイダンス
+        <input name="prompt" defaultValue={initial?.prompt ?? ''} placeholder="custom/vm-intro" className={`${fClass} font-mono`} />
+      </label>
+      <div className="flex items-end gap-2">
+        <button type="submit" className="rounded-md bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-500">
+          {submitLabel}
+        </button>
+        {isEdit && deleteAction && (
+          <ConfirmButton confirmText={`留守電 ${initial.number} を削除しますか？`}
+            formAction={deleteAction} className="rounded-md border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50">
+            削除
+          </ConfirmButton>
+        )}
+      </div>
+    </form>
   );
 }

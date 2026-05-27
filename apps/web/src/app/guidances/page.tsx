@@ -25,7 +25,8 @@ export default async function GuidancesPage() {
       </header>
 
       <section className="rounded-lg border border-slate-200 bg-white p-4">
-        <h3 className="mb-3 text-sm font-semibold text-slate-700">wav アップロード</h3>
+        <h3 className="mb-3 text-sm font-semibold text-slate-700">wav アップロード / 差し替え</h3>
+        <p className="mb-2 text-[11px] text-slate-500">同じ name で再アップロードすると上書きされます。</p>
         <form
           method="post"
           action="/api/guidances"
@@ -69,21 +70,40 @@ export default async function GuidancesPage() {
         ) : (
           <ul className="divide-y divide-slate-200">
             {items.map((g) => (
-              <li key={g.name} className="flex items-center gap-3 py-2 text-sm">
-                <span className="font-mono">{g.name}</span>
-                <span className="text-xs text-slate-500">
-                  {g.source} / {g.size ?? '-'} bytes
-                </span>
-                <span className="ml-auto text-xs text-slate-500">{g.updatedAt}</span>
-                <form action={deleteGuidanceAction}>
-                  <input type="hidden" name="name" value={g.name} />
-                  <ConfirmButton
-                    confirmText={`ガイダンス ${g.name} を削除しますか？`}
-                    className="rounded border border-red-300 bg-white px-2 py-0.5 text-xs text-red-700 hover:bg-red-50"
+              <li key={g.name} className="py-3 text-sm">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="font-mono font-semibold">{g.name}</span>
+                  <span className="text-xs text-slate-500">
+                    {g.source} / {g.size ?? '-'} bytes
+                  </span>
+                  <span className="ml-auto text-xs text-slate-500">{g.updatedAt}</span>
+                  <form action={deleteGuidanceAction}>
+                    <input type="hidden" name="name" value={g.name} />
+                    <ConfirmButton
+                      confirmText={`ガイダンス ${g.name} を削除しますか？`}
+                      className="rounded border border-red-300 bg-white px-2 py-0.5 text-xs text-red-700 hover:bg-red-50"
+                    >
+                      削除
+                    </ConfirmButton>
+                  </form>
+                </div>
+                <details className="mt-2">
+                  <summary className="cursor-pointer text-[11px] text-blue-700">差し替えアップロード</summary>
+                  <form
+                    method="post"
+                    action="/api/guidances"
+                    encType="multipart/form-data"
+                    className="mt-2 flex items-end gap-2"
                   >
-                    削除
-                  </ConfirmButton>
-                </form>
+                    <input type="hidden" name="name" value={g.name} />
+                    <input type="file" name="file" accept="audio/wav,.wav" required
+                      className="w-full rounded border border-slate-300 px-2 py-1 text-xs" />
+                    <button type="submit"
+                      className="shrink-0 rounded bg-blue-600 px-3 py-1 text-xs font-semibold text-white hover:bg-blue-700">
+                      差し替え
+                    </button>
+                  </form>
+                </details>
               </li>
             ))}
           </ul>

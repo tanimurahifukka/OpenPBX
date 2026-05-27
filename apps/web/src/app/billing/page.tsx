@@ -23,6 +23,7 @@ export default async function BillingPage() {
 
       <section className="rounded-lg border border-slate-200 bg-white p-4">
         <h3 className="mb-3 text-sm font-semibold text-slate-700">レート表 ({rates.length})</h3>
+        <p className="mb-2 text-[11px] text-slate-500">同じ prefix で登録すると既存レートを上書きします。</p>
         <form action={upsertRateAction} className="mb-3 grid grid-cols-[100px_1fr_120px_120px_auto] gap-2">
           <input
             name="prefix"

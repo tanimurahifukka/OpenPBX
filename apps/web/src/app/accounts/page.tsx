@@ -27,34 +27,35 @@ export default async function AccountsPage() {
       <section className="rounded-lg border border-slate-200 bg-white p-4">
         <h3 className="mb-3 text-sm font-semibold text-slate-700">新規追加</h3>
         <form action={createAccountAction} className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_1fr_140px_auto]">
-          <input
-            name="username"
-            required
-            pattern="[A-Za-z0-9_-]{3,32}"
-            placeholder="username (3-32文字)"
-            className="rounded border border-slate-300 px-2 py-1 text-sm"
-          />
-          <input
-            name="displayName"
-            placeholder="表示名"
-            className="rounded border border-slate-300 px-2 py-1 text-sm"
-          />
-          <input
-            name="password"
-            type="password"
-            required
-            minLength={8}
-            placeholder="password (8文字以上)"
-            className="rounded border border-slate-300 px-2 py-1 text-sm"
-          />
-          <select name="role" defaultValue="user" className="rounded border border-slate-300 px-2 py-1 text-sm">
-            <option value="user">user</option>
-            <option value="supervisor">supervisor</option>
-            <option value="admin">admin</option>
-          </select>
-          <button type="submit" className="rounded bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white">
-            追加
-          </button>
+          <label className="text-xs text-slate-600">
+            ユーザー名
+            <input name="username" required pattern="[A-Za-z0-9_-]{3,32}" placeholder="3-32文字"
+              className="mt-1 w-full rounded border border-slate-300 px-2 py-1 text-sm" />
+          </label>
+          <label className="text-xs text-slate-600">
+            表示名
+            <input name="displayName" placeholder="表示名"
+              className="mt-1 w-full rounded border border-slate-300 px-2 py-1 text-sm" />
+          </label>
+          <label className="text-xs text-slate-600">
+            パスワード
+            <input name="password" type="password" required minLength={8} placeholder="8文字以上"
+              className="mt-1 w-full rounded border border-slate-300 px-2 py-1 text-sm" />
+          </label>
+          <label className="text-xs text-slate-600">
+            ロール
+            <select name="role" defaultValue="user"
+              className="mt-1 w-full rounded border border-slate-300 px-2 py-1 text-sm">
+              <option value="user">user</option>
+              <option value="supervisor">supervisor</option>
+              <option value="admin">admin</option>
+            </select>
+          </label>
+          <div className="flex items-end">
+            <button type="submit" className="rounded bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white">
+              追加
+            </button>
+          </div>
         </form>
       </section>
 
@@ -72,15 +73,14 @@ export default async function AccountsPage() {
 
 function AccountRow({ account: a, isMe }: { account: Account; isMe: boolean }) {
   return (
-    <li className="space-y-2 py-3">
+    <li className="py-3">
       <div className="flex items-baseline gap-3 text-sm">
-        <span className="font-mono">{a.username}</span>
+        <span className="font-mono font-semibold">{a.username}</span>
         {isMe && (
           <span className="rounded-full border border-blue-300 bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-800">
             あなた
           </span>
         )}
-        <span className="text-slate-600">{a.displayName ?? '-'}</span>
         <span className="text-xs text-slate-500">{a.role}</span>
         {a.totpEnabled && (
           <span className="rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10px] text-emerald-800">
@@ -90,59 +90,60 @@ function AccountRow({ account: a, isMe }: { account: Account; isMe: boolean }) {
         <span className="ml-auto text-xs text-slate-400">{a.createdAt}</span>
       </div>
 
-      {/* 表示名 */}
-      <form action={updateAccountDisplayNameAction} className="grid grid-cols-[1fr_auto] gap-2">
-        <input type="hidden" name="id" value={a.id} />
-        <input
-          name="displayName"
-          defaultValue={a.displayName ?? ''}
-          placeholder="表示名"
-          className="rounded border border-slate-300 px-2 py-1 text-xs"
-        />
-        <button type="submit" className="rounded border border-slate-300 bg-white px-2 py-1 text-xs">
-          表示名を更新
-        </button>
-      </form>
-
-      {/* ロール */}
-      <form action={updateAccountRoleAction} className="grid grid-cols-[140px_auto] gap-2">
-        <input type="hidden" name="id" value={a.id} />
-        <select name="role" defaultValue={a.role} className="rounded border border-slate-300 px-2 py-1 text-xs">
-          <option value="user">user</option>
-          <option value="supervisor">supervisor</option>
-          <option value="admin">admin</option>
-        </select>
-        <button type="submit" className="rounded border border-slate-300 bg-white px-2 py-1 text-xs">
-          ロールを更新
-        </button>
-      </form>
-
-      {/* パスワード */}
-      <form action={updateAccountPasswordAction} className="grid grid-cols-[1fr_auto] gap-2">
-        <input type="hidden" name="id" value={a.id} />
-        <input
-          name="password"
-          type="password"
-          minLength={8}
-          placeholder="新しいパスワード"
-          className="rounded border border-slate-300 px-2 py-1 text-xs"
-        />
-        <button type="submit" className="rounded border border-slate-300 bg-white px-2 py-1 text-xs">
-          パスワードを更新
-        </button>
-      </form>
-
-      {/* 削除 */}
-      {!isMe && (
-        <form action={deleteAccountAction}>
+      <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_140px_1fr]">
+        <form action={updateAccountDisplayNameAction} className="flex gap-2">
           <input type="hidden" name="id" value={a.id} />
-          <ConfirmButton
-            confirmText={`アカウント "${a.username}" を削除しますか？`}
-            className="rounded border border-red-300 bg-white px-2 py-1 text-xs text-red-700 hover:bg-red-50"
-          >
-            削除
-          </ConfirmButton>
+          <label className="flex-1 text-[11px] text-slate-500">
+            表示名
+            <input name="displayName" defaultValue={a.displayName ?? ''} placeholder="表示名"
+              className="mt-1 w-full rounded border border-slate-300 px-2 py-1 text-xs" />
+          </label>
+          <button type="submit" className="mt-5 shrink-0 rounded border border-slate-300 bg-white px-2 py-1 text-xs hover:bg-slate-50">
+            更新
+          </button>
         </form>
+
+        <form action={updateAccountRoleAction} className="flex gap-2">
+          <input type="hidden" name="id" value={a.id} />
+          <label className="flex-1 text-[11px] text-slate-500">
+            ロール
+            <select name="role" defaultValue={a.role}
+              className="mt-1 w-full rounded border border-slate-300 px-2 py-1 text-xs">
+              <option value="user">user</option>
+              <option value="supervisor">supervisor</option>
+              <option value="admin">admin</option>
+            </select>
+          </label>
+          <button type="submit" className="mt-5 shrink-0 rounded border border-slate-300 bg-white px-2 py-1 text-xs hover:bg-slate-50">
+            更新
+          </button>
+        </form>
+
+        <form action={updateAccountPasswordAction} className="flex gap-2">
+          <input type="hidden" name="id" value={a.id} />
+          <label className="flex-1 text-[11px] text-slate-500">
+            パスワード
+            <input name="password" type="password" minLength={8} placeholder="新しいパスワード"
+              className="mt-1 w-full rounded border border-slate-300 px-2 py-1 text-xs" />
+          </label>
+          <button type="submit" className="mt-5 shrink-0 rounded border border-slate-300 bg-white px-2 py-1 text-xs hover:bg-slate-50">
+            更新
+          </button>
+        </form>
+      </div>
+
+      {!isMe && (
+        <div className="mt-2">
+          <form action={deleteAccountAction}>
+            <input type="hidden" name="id" value={a.id} />
+            <ConfirmButton
+              confirmText={`アカウント "${a.username}" を削除しますか？`}
+              className="rounded border border-red-300 bg-white px-2 py-1 text-xs text-red-700 hover:bg-red-50"
+            >
+              削除
+            </ConfirmButton>
+          </form>
+        </div>
       )}
     </li>
   );

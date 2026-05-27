@@ -50,12 +50,10 @@ export default async function BusinessHoursPage() {
 
       <section className="rounded-lg border border-slate-200 bg-white p-4">
         <h3 className="mb-3 text-sm font-semibold text-slate-700">時間帯ルール ({rules.length})</h3>
-        <details className="mb-3" open>
-          <summary className="cursor-pointer text-xs text-blue-700">新規追加</summary>
-          <div className="mt-2 rounded-lg border border-blue-100 bg-blue-50/50 p-3">
-            <TimeRuleForm action={createTimeRuleAction} submitLabel="追加" />
-          </div>
-        </details>
+        <div className="mb-3 rounded-lg border border-blue-100 bg-blue-50/50 p-3">
+          <p className="mb-2 text-xs font-semibold text-slate-700">新規追加</p>
+          <TimeRuleForm action={createTimeRuleAction} submitLabel="追加" />
+        </div>
         {rules.length === 0 ? (
           <p className="text-sm text-slate-500">時間帯ルールがまだありません。</p>
         ) : (

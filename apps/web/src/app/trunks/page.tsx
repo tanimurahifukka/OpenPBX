@@ -54,19 +54,34 @@ function TrunkForm({ action, initial, submitLabel, deleteAction }: Props) {
   const isEdit = !!initial;
   return (
     <form action={action} className="grid grid-cols-1 gap-3 sm:grid-cols-[180px_1fr_100px_1fr_1fr_auto]">
-      <input name="name"
-        required pattern="[A-Za-z0-9_-]{1,32}"
-        defaultValue={initial?.name ?? ''} readOnly={isEdit} placeholder="trunk name"
-        className="rounded border border-slate-300 px-2 py-1 font-mono text-sm read-only:bg-slate-100" />
-      <input name="host" required defaultValue={initial?.host ?? ''} placeholder="host (e.g. sip.example.com)"
-        className="rounded border border-slate-300 px-2 py-1 font-mono text-sm" />
-      <input name="port" type="number" min={1} max={65535} defaultValue={initial?.port ?? 5060}
-        className="rounded border border-slate-300 px-2 py-1 font-mono text-sm" />
-      <input name="username" defaultValue={initial?.username ?? ''} placeholder="username"
-        className="rounded border border-slate-300 px-2 py-1 font-mono text-sm" />
-      <input name="secret" type="password" defaultValue={initial?.secret ?? ''} placeholder="secret"
-        className="rounded border border-slate-300 px-2 py-1 font-mono text-sm" />
-      <div className="flex items-center gap-2">
+      <label className="text-xs text-slate-600">
+        Trunk名
+        <input name="name"
+          required pattern="[A-Za-z0-9_-]{1,32}"
+          defaultValue={initial?.name ?? ''} readOnly={isEdit} placeholder="trunk name"
+          className="mt-1 w-full rounded border border-slate-300 px-2 py-1 font-mono text-sm read-only:bg-slate-100" />
+      </label>
+      <label className="text-xs text-slate-600">
+        ホスト
+        <input name="host" required defaultValue={initial?.host ?? ''} placeholder="sip.example.com"
+          className="mt-1 w-full rounded border border-slate-300 px-2 py-1 font-mono text-sm" />
+      </label>
+      <label className="text-xs text-slate-600">
+        ポート
+        <input name="port" type="number" min={1} max={65535} defaultValue={initial?.port ?? 5060}
+          className="mt-1 w-full rounded border border-slate-300 px-2 py-1 font-mono text-sm" />
+      </label>
+      <label className="text-xs text-slate-600">
+        ユーザー名
+        <input name="username" defaultValue={initial?.username ?? ''} placeholder="username"
+          className="mt-1 w-full rounded border border-slate-300 px-2 py-1 font-mono text-sm" />
+      </label>
+      <label className="text-xs text-slate-600">
+        シークレット
+        <input name="secret" type="password" defaultValue={initial?.secret ?? ''} placeholder="secret"
+          className="mt-1 w-full rounded border border-slate-300 px-2 py-1 font-mono text-sm" />
+      </label>
+      <div className="flex items-end gap-2">
         <button type="submit" className="rounded bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white">
           {submitLabel}
         </button>
