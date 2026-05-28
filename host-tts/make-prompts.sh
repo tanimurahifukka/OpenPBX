@@ -34,6 +34,7 @@ declare -a items=(
   "ivr-menu|ご用件の番号を押してください。当日のご予約は1、折り返しのご依頼は2、スタッフへお繋ぎする場合は0を押してください。"
   "ivr-record-intro|ピーッという音の後にメッセージをお話しください。録音を終わるときはシャープを押すか、そのままお電話を切ってください。"
   "ivr-callback-intro|ピーッという音の後に、お名前と折り返し希望のお時間をお話しください。"
+  "ivr-reservation-intro|当日のご予約を承ります。ピーッという音の後に、お名前、ご希望の時間、診療内容をお話しください。"
   "ivr-thank-you|お電話ありがとうございました。"
   "ivr-transferring|担当者におつなぎします。少々お待ちください。"
   "ivr-invalid|入力が正しくありません。もう一度お試しください。"
@@ -57,7 +58,7 @@ print(json.dumps({
 }, ensure_ascii=False))
 " "${name}" "${text}" "${SPEAKER_ID}")
 
-  http_status=$(curl -s -o "${out_path}.tmp" -w "%{http_code}" \
+  http_status=$(curl -s -o "${out_path}.raw" -w "%{http_code}" \
     -X POST "${VOICEBOX_URL}/synthesize-phone-wav" \
     -H "Authorization: Bearer ${VOICEBOX_TOKEN}" \
     -H "Content-Type: application/json" \
@@ -66,15 +67,22 @@ print(json.dumps({
 
   if [[ "${http_status}" != "200" ]]; then
     echo "  error: HTTP ${http_status}" >&2
-    if [[ -f "${out_path}.tmp" ]]; then
-      head -c 500 "${out_path}.tmp" >&2
+    if [[ -f "${out_path}.raw" ]]; then
+      head -c 500 "${out_path}.raw" >&2
       echo "" >&2
-      rm -f "${out_path}.tmp"
+      rm -f "${out_path}.raw"
     fi
     exit 1
   fi
 
-  mv "${out_path}.tmp" "${out_path}"
+  # VoiceBox (内部 ffmpeg lavf) は RIFF/data チャンクサイズを 0xFFFFFFFF (未確定)
+  # で出力する。Asterisk の format_wav は確定したサイズと、シンプルな
+  # RIFF/fmt/data のみのチャンク構成を要求するため、ffmpeg で再エンコードして
+  # クリーンな wav (FLLR/LIST チャンクなし) に書き直す。
+  ffmpeg -loglevel error -y -i "${out_path}.raw" \
+    -ar 8000 -ac 1 -acodec pcm_s16le -fflags +bitexact -flags +bitexact \
+    -map_metadata -1 "${out_path}"
+  rm -f "${out_path}.raw"
 done
 
 echo ""

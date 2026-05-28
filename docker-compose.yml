@@ -31,7 +31,10 @@ services:
       - ./asterisk/sms-send.sh:/usr/local/bin/sms-send.sh:ro
       - ./asterisk/entrypoint.sh:/usr/local/bin/entrypoint.sh:ro
       - ./data/voicemail:/var/spool/asterisk/voicemail
-      - ./asterisk/sounds/custom:/var/lib/asterisk/sounds/custom:ro
+      # Asterisk Debian パッケージは /usr/share/asterisk/sounds/custom を
+      # /usr/local/share/asterisk/sounds への symlink にしているため、
+      # bind mount は symlink 先である /usr/local/share/... に張る。
+      - ./asterisk/sounds/custom:/usr/local/share/asterisk/sounds:ro
       - ./data/recordings:/var/spool/asterisk/monitor
       - ./data/signals:/signals
       - ./data/inbox:/inbox
