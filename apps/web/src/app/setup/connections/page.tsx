@@ -1,5 +1,6 @@
 import { requireRole } from '@/lib/auth';
 import { getCommandRoomConfig, getVoiceBoxConfig } from '@/lib/settings';
+import { UPSTREAM_BRAND } from '@/lib/branding';
 import { ConnectionsForm } from './ConnectionsForm';
 
 export const dynamic = 'force-dynamic';
@@ -15,7 +16,7 @@ export default async function ConnectionsPage() {
       <header>
         <h2 className="text-lg font-semibold">接続設定</h2>
         <p className="text-xs text-slate-500">
-          command-room や VoiceBox との接続を設定します。どちらも任意で、
+          {UPSTREAM_BRAND.shortName} や VoiceBox との接続を設定します。どちらも任意で、
           設定しなくても OpenPBX 単体で内線・IVR・録音は動きます。
         </p>
       </header>

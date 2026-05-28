@@ -66,6 +66,99 @@ function listSourceFiles(dir: string): string[] {
   return out;
 }
 
+// ---------------------------------------------------------------------------
+// Branding regression: 上流プロダクト名は CHIPS。OpenPBX UI が "command-room 連携"
+// 等のレガシー表記を出していないことを assert。
+// 例外: testConnection() の discriminator (target: 'command-room' | 'voicebox')、
+//       内部識別子としてのコメント、'// ---- command-room ----' のような
+//       コード区切り。これらは識別子・コメントなので false positive。
+// ---------------------------------------------------------------------------
+describe('branding regression: OpenPBX user-facing UI に command-room レガシー表記を出さない', () => {
+  const files = listSourceFiles(WEB_SRC_APP).filter((f) => !isAllowed(f));
+
+  it('"command-room" の prose 表記が user-facing ページに残っていない', () => {
+    const violations: string[] = [];
+    for (const f of files) {
+      const lines = fs.readFileSync(f, 'utf8').split('\n');
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (!line.includes('command-room')) continue;
+        if (/^\s*\/\//.test(line)) continue; // 1行コメント
+        if (/^\s*\*/.test(line)) continue; // JSDoc 継続行
+        // JSX block comment `{/* ... */}` (画面に出ない)
+        if (/\{\s*\/\*[\s\S]*command-room[\s\S]*\*\/\s*\}/.test(line)) continue;
+        // 識別子としての出現 (testConnection の discriminator 等) は許容:
+        //   - 'command-room' / "command-room" がクォートで囲まれた "値" 用法
+        //   - target: 'command-room'
+        if (/['"`]command-room['"`]/.test(line)) continue;
+        // 'openpbx-connect://' / URL リテラル等の中の出現は許容
+        if (/openpbx-connect:\/\//.test(line)) continue;
+        violations.push(`${path.relative(WEB_SRC_APP, f)}:${i + 1}: ${line.trim()}`);
+      }
+    }
+    expect(
+      violations,
+      [
+        'OpenPBX user-facing UI must say CHIPS instead of "command-room".',
+        'Use UPSTREAM_BRAND.shortName / UPSTREAM_BRAND.integrationLabel from @/lib/branding.',
+        '',
+        ...violations,
+      ].join('\n'),
+    ).toEqual([]);
+  });
+
+  it('"Command Room" レガシー製品名が user-facing ページに残っていない', () => {
+    const violations: string[] = [];
+    for (const f of files) {
+      const lines = fs.readFileSync(f, 'utf8').split('\n');
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (!line.includes('Command Room')) continue;
+        if (/^\s*\/\//.test(line)) continue;
+        if (/^\s*\*/.test(line)) continue;
+        violations.push(`${path.relative(WEB_SRC_APP, f)}:${i + 1}: ${line.trim()}`);
+      }
+    }
+    expect(violations, violations.join('\n')).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Protocol regression: 以下の internal contract identifier は CHIPS rename で
+// 書き換えられてはいけない。
+// ---------------------------------------------------------------------------
+describe('protocol regression: contract identifier は CHIPS rename で消えない', () => {
+  const SRC_DIR = path.resolve(__dirname, '../..');
+
+  const REQUIRED_PROTOCOL_LITERALS = [
+    'X-Command-Room-Device-Token',
+    'command-room-pbx/event/v1',
+    'EVENT_PUSH_URL',
+    'EVENT_PUSH_TOKEN',
+  ];
+
+  function listTsFiles(dir: string): string[] {
+    const out: string[] = [];
+    if (!fs.existsSync(dir)) return out;
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name.startsWith('.') || entry.name === 'node_modules') continue;
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) out.push(...listTsFiles(full));
+      else if (full.endsWith('.ts') || full.endsWith('.tsx')) out.push(full);
+    }
+    return out;
+  }
+
+  const files = listTsFiles(SRC_DIR);
+
+  for (const literal of REQUIRED_PROTOCOL_LITERALS) {
+    it(`"${literal}" が source に少なくとも 1 箇所残っている`, () => {
+      const hit = files.some((f) => fs.readFileSync(f, 'utf8').includes(literal));
+      expect(hit, `${literal} が OpenPBX src/ 配下から完全に消えています。CHIPS rename で contract を壊した可能性があります。`).toBe(true);
+    });
+  }
+});
+
 describe('copy regression (UX): 通常ユーザー画面に内部技術用語を出さない', () => {
   const files = listSourceFiles(WEB_SRC_APP).filter((f) => !isAllowed(f));
 

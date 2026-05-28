@@ -11,6 +11,28 @@ export interface GuidanceTtsFormProps {
   defaultSpeakerId?: number;
 }
 
+/** VOICEVOX 四国めたん / ノーマル — default voice for IVR guidance. */
+const DEFAULT_SPEAKER_NAME = '四国めたん';
+const DEFAULT_STYLE_NAME = 'ノーマル';
+const DEFAULT_SPEAKER_ID_FALLBACK = 2;
+
+function pickDefaultSpeakerId(
+  speakers: VoiceBoxSpeaker[],
+  hint?: number,
+): number {
+  if (hint != null && speakers.some((s) => s.speakerId === hint)) return hint;
+  const metan = speakers.find(
+    (s) =>
+      s.speakerName === DEFAULT_SPEAKER_NAME &&
+      s.styleName === DEFAULT_STYLE_NAME,
+  );
+  if (metan) return metan.speakerId;
+  if (speakers.some((s) => s.speakerId === DEFAULT_SPEAKER_ID_FALLBACK)) {
+    return DEFAULT_SPEAKER_ID_FALLBACK;
+  }
+  return speakers[0]?.speakerId ?? DEFAULT_SPEAKER_ID_FALLBACK;
+}
+
 const SPEED_OPTIONS: Array<{ value: number; label: string }> = [
   { value: 0.9, label: 'ゆっくり' },
   { value: 1.0, label: '標準' },
@@ -55,7 +77,7 @@ export function GuidanceTtsForm({
   const [name, setName] = useState<string>(prefillName ?? '');
   const [text, setText] = useState<string>('');
   const [speakerId, setSpeakerId] = useState<number>(
-    defaultSpeakerId ?? speakers[0]?.speakerId ?? 1,
+    pickDefaultSpeakerId(speakers, defaultSpeakerId),
   );
   const [speedScale, setSpeedScale] = useState<number>(1.0);
   const [busy, setBusy] = useState<boolean>(false);

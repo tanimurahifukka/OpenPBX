@@ -7,6 +7,7 @@ import { countByStatus, OUTBOX_STATUS_LABEL } from '@/lib/events/v1/outbox';
 import { describeMissingEmitConfig } from '@/lib/events/v1/emit';
 import { StatusMessage } from '@/components/StatusMessage';
 import { getNetworkSettings } from '@/lib/network';
+import { UPSTREAM_BRAND } from '@/lib/branding';
 import os from 'node:os';
 
 export const dynamic = 'force-dynamic';
@@ -46,7 +47,7 @@ export default async function OverviewPage() {
     countFiles(INBOX_DIR, /\.meta\.json$/),
     mtime(path.join(PJSIP_OUT_DIR, 'extensions.conf')),
   ]);
-  // command-room との連携状況 (送信待ち / 送信済み / 確認が必要)
+  // CHIPS (旧 command-room) との連携状況 (送信待ち / 送信済み / 確認が必要)
   // DB に event_outbox が未投入 (テスト環境等) でも例外で落ちないように try/catch
   let outboxCounts: { pending: number; sent: number; dead: number } | null = null;
   try {
@@ -80,9 +81,9 @@ export default async function OverviewPage() {
         <Card label="Inbox meta" value={fmtCount(inboxMetas)} hint="event JSON" />
       </section>
 
-      <section aria-label="command-room 連携" className="rounded-lg border border-slate-200 bg-white p-4 space-y-3">
+      <section aria-label={UPSTREAM_BRAND.integrationLabel} className="rounded-lg border border-slate-200 bg-white p-4 space-y-3">
         <div className="flex items-baseline justify-between">
-          <h3 className="text-sm font-semibold text-slate-700">command-room 連携</h3>
+          <h3 className="text-sm font-semibold text-slate-700">{UPSTREAM_BRAND.integrationLabel}</h3>
           {missingPushEnv.length > 0 && (
             <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">未設定</span>
           )}
@@ -99,7 +100,7 @@ export default async function OverviewPage() {
         {missingPushEnv.length > 0 && (
           <StatusMessage
             tone="off"
-            title="command-room 未接続"
+            title={`${UPSTREAM_BRAND.shortName} 未接続`}
             description="通話記録を対応カードに送りたい場合に設定します。電話・IVR・録音はそのまま使えます。"
             action={{ label: '接続設定を開く', href: '/setup/connections' }}
           />
@@ -108,7 +109,7 @@ export default async function OverviewPage() {
           <StatusMessage
             tone="error"
             title={`送信できなかったイベントが ${outboxCounts.dead} 件`}
-            description="command-room との接続が切れているか、設定が変わった可能性があります。"
+            description={`${UPSTREAM_BRAND.shortName} との接続が切れているか、設定が変わった可能性があります。`}
             action={{ label: '接続設定を確認する', href: '/setup/connections' }}
             showAdminEscalation
           />
@@ -160,7 +161,7 @@ export default async function OverviewPage() {
       </section>
 
       <footer className="text-xs text-slate-400">
-        文字起こし・要約は command-room と Hayabusa が担当します。
+        文字起こし・要約は {UPSTREAM_BRAND.shortName} と Hayabusa が担当します。
       </footer>
     </div>
   );

@@ -10,6 +10,7 @@ import fs from 'node:fs/promises';
 import { requireAccount, listAccounts } from '@/lib/auth';
 import { amiClient, amiIsReady } from '@/lib/ami';
 import { describeMissingEmitConfig } from '@/lib/events/v1/emit';
+import { UPSTREAM_BRAND } from '@/lib/branding';
 import { CopyDiagnosticButton } from './_components/CopyDiagnosticButton';
 
 export const dynamic = 'force-dynamic';
@@ -164,7 +165,7 @@ function checkCommandRoomLink(): CheckResult {
   const missing = describeMissingEmitConfig();
   if (missing.length === 0) {
     return {
-      label: 'command-room 連携',
+      label: UPSTREAM_BRAND.integrationLabel,
       tone: 'ok',
       statusLabel: '接続設定済み',
       message: '対応カードへの送信が有効です。',
@@ -172,17 +173,17 @@ function checkCommandRoomLink(): CheckResult {
     };
   }
   return {
-    label: 'command-room 連携',
+    label: UPSTREAM_BRAND.integrationLabel,
     tone: 'info',
     statusLabel: '未設定',
     message:
-      'command-room に通話記録を送る場合は、接続設定ページから設定してください。' +
-      ' command-room の管理者に「接続コード」を発行してもらい、貼り付けるだけで完了します。' +
+      `${UPSTREAM_BRAND.shortName} に通話記録を送る場合は、接続設定ページから設定してください。` +
+      ` ${UPSTREAM_BRAND.shortName} の管理者に「接続コード」を発行してもらい、貼り付けるだけで完了します。` +
       ' 設定しなくても OpenPBX 単体で内線・IVR・録音は使えます。',
     audience: 'self',
     nextActions: [
       '接続設定ページ (/setup/connections) を開く',
-      'command-room 管理者に接続コードを発行してもらう',
+      `${UPSTREAM_BRAND.shortName} 管理者に接続コードを発行してもらう`,
       '接続コードを貼り付けて「テスト接続」で確認',
     ],
   };
@@ -253,7 +254,7 @@ export default async function SetupPage() {
     Promise.resolve(checkAmi()),
     checkDir('録音フォルダ', RECORDINGS_DIR, '録音 wav はここに保存されます (ローカルのみ)。', 'self'),
     checkDir('受信ボックス (inbox)', INBOX_DIR, 'Asterisk から外部統合層への引き渡し場所。', 'admin'),
-    checkDir('送信ボックス (outbox-v1)', OUTBOX_DIR, 'command-room への送信待ちイベントが並びます。', 'admin'),
+    checkDir('送信ボックス (outbox-v1)', OUTBOX_DIR, `${UPSTREAM_BRAND.shortName} への送信待ちイベントが並びます。`, 'admin'),
     Promise.resolve(checkCookieSecure()),
     Promise.resolve(checkPorts()),
   ]);

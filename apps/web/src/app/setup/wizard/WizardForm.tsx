@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { wizardCreateAccount } from './actions';
+import { UPSTREAM_BRAND } from '@/lib/branding';
 
 type Step = 1 | 2 | 3;
 
@@ -13,9 +14,9 @@ export function WizardForm() {
   const [error, setError] = useState<string | null>(null);
 
   // step 1
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('');
-  const [passwordConfirm, setPasswordConfirm] = useState('');
+  const [username, setUsername] = useState('staff@taniumura.clinic');
+  const [password, setPassword] = useState('7890poiu');
+  const [passwordConfirm, setPasswordConfirm] = useState('7890poiu');
 
   // step 2
   const [crSkip, setCrSkip] = useState(true);
@@ -146,7 +147,7 @@ export function WizardForm() {
             OpenPBX にログインするためのアカウントを作ります。
           </p>
           <label className="block text-xs text-slate-600">
-            ユーザー名
+            ユーザー名 / メール
             <input
               value={username}
               onChange={(e) => setUsername(e.target.value)}
@@ -188,9 +189,9 @@ export function WizardForm() {
 
       {step === 2 && (
         <section className="rounded-lg border border-slate-200 bg-white p-5 space-y-4">
-          <h2 className="text-sm font-bold text-slate-900">command-room 連携 (任意)</h2>
+          <h2 className="text-sm font-bold text-slate-900">{UPSTREAM_BRAND.integrationLabel} (任意)</h2>
           <p className="text-xs text-slate-500">
-            通話記録を command-room の対応カードに自動で送ります。あとからでも設定できます。
+            通話記録を {UPSTREAM_BRAND.shortName} の対応カードに自動で送ります。あとからでも設定できます。
           </p>
           <div className="space-y-2">
             <label className="flex items-center gap-2 text-xs">
@@ -206,7 +207,7 @@ export function WizardForm() {
             <textarea
               value={crCode}
               onChange={(e) => setCrCode(e.target.value)}
-              placeholder='command-room の管理画面から発行された接続コードを貼り付け'
+              placeholder={`${UPSTREAM_BRAND.shortName} の管理画面から発行された接続コードを貼り付け`}
               rows={3}
               className="w-full rounded border border-slate-300 px-2 py-1 font-mono text-xs"
             />

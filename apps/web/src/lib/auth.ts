@@ -49,6 +49,7 @@ const SCRYPT_P = 1;
 const KEY_LEN = 64;
 
 const SCRYPT_MAXMEM = 64 * 1024 * 1024;
+const USERNAME_RE = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$|^[A-Za-z0-9_-]{3,32}$/;
 
 export function hashPassword(plain: string): string {
   const salt = crypto.randomBytes(16);
@@ -100,7 +101,7 @@ export function createAccount(input: {
   role?: Role;
 }): Account {
   const username = input.username.trim();
-  if (!/^[A-Za-z0-9_-]{3,32}$/.test(username)) throw new Error('username は 3〜32 文字の英数 / _ / -');
+  if (!USERNAME_RE.test(username)) throw new Error('username はメールアドレス、または 3〜32 文字の英数 / _ / -');
   enforcePasswordPolicy(input.password);
   if (getAccountByUsername(username)) throw new Error(`username 重複: ${username}`);
   const role: Role = input.role ?? 'user';

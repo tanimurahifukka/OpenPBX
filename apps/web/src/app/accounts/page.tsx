@@ -28,8 +28,8 @@ export default async function AccountsPage() {
         <h3 className="mb-3 text-sm font-semibold text-slate-700">新規追加</h3>
         <form action={createAccountAction} className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_1fr_140px_auto]">
           <label className="text-xs text-slate-600">
-            ユーザー名
-            <input name="username" required pattern="[A-Za-z0-9_-]{3,32}" placeholder="3-32文字"
+            ユーザー名 / メール
+            <input name="username" required placeholder="staff@taniumura.clinic"
               className="mt-1 w-full rounded border border-slate-300 px-2 py-1 text-sm" />
           </label>
           <label className="text-xs text-slate-600">

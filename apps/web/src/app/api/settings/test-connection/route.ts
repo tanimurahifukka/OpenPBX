@@ -12,6 +12,7 @@
 import { NextResponse } from 'next/server';
 import { requireApi } from '@/lib/auth';
 import { getCommandRoomConfig, getVoiceBoxConfig } from '@/lib/settings';
+import { UPSTREAM_BRAND } from '@/lib/branding';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -43,7 +44,7 @@ export async function POST(req: Request) {
     const cr = getCommandRoomConfig();
     const testUrl = typeof body.url === 'string' && body.url.trim() ? body.url.trim() : cr.pushUrl;
     if (!testUrl) {
-      return NextResponse.json({ ok: false, message: 'command-room の接続先が設定されていません' });
+      return NextResponse.json({ ok: false, message: `${UPSTREAM_BRAND.shortName} の接続先が設定されていません` });
     }
     try {
       const ac = new AbortController();
@@ -55,20 +56,20 @@ export async function POST(req: Request) {
       if (res.status < 500) {
         return NextResponse.json({
           ok: true,
-          message: `command-room に接続できました (HTTP ${res.status})`,
+          message: `${UPSTREAM_BRAND.shortName} に接続できました (HTTP ${res.status})`,
           status: res.status,
         });
       }
       return NextResponse.json({
         ok: false,
-        message: `command-room が HTTP ${res.status} を返しました。サーバーは起動していますか？`,
+        message: `${UPSTREAM_BRAND.shortName} が HTTP ${res.status} を返しました。サーバーは起動していますか？`,
         status: res.status,
       });
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       return NextResponse.json({
         ok: false,
-        message: `command-room に接続できません: ${msg.includes('abort') ? 'タイムアウト (10秒)' : msg}`,
+        message: `${UPSTREAM_BRAND.shortName} に接続できません: ${msg.includes('abort') ? 'タイムアウト (10秒)' : msg}`,
       });
     }
   }

@@ -6,6 +6,7 @@ import {
 } from '@/app/actions';
 import { ConfirmButton } from '@/components/ConfirmButton';
 import { requireAccount } from '@/lib/auth';
+import { UPSTREAM_BRAND } from '@/lib/branding';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -32,7 +33,7 @@ export default async function PhonebookPage({ searchParams }: { searchParams: Pr
             <li>診療内容・相談内容・案件詳細・契約金額など機微情報は書かないでください。</li>
             <li>
               詳しい対応内容は{' '}
-              <code className="rounded bg-white px-1">command-room</code>{' '}
+              <strong>{UPSTREAM_BRAND.shortName}</strong>{' '}
               側の「対応カード」に残してください。電話帳には書きません。
             </li>
             <li>顧客の詳しい属性 (生年月日 / 住所 / 病歴 / 個別事情) は別システムで管理してください。</li>
@@ -135,7 +136,7 @@ function PhonebookForm({ action, initial, submitLabel, deleteAction }: Props) {
         <input
           name="note"
           defaultValue={initial?.note ?? ''}
-          placeholder="例: 午前中に連絡しやすい / 代表番号 ※詳細は command-room の対応カードへ"
+          placeholder={`例: 午前中に連絡しやすい / 代表番号 ※詳細は ${UPSTREAM_BRAND.shortName} の対応カードへ`}
           maxLength={120}
           className="mt-1 w-full rounded border border-slate-300 px-2 py-1 text-sm"
         />

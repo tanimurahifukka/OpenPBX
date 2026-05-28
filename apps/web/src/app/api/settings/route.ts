@@ -10,6 +10,7 @@ import {
   setVoiceBoxConfig,
   parseConnectCode,
 } from '@/lib/settings';
+import { UPSTREAM_BRAND } from '@/lib/branding';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -78,11 +79,11 @@ export async function POST(req: Request) {
       }
     } else if (typeof cm.pushUrl === 'string') {
       if (!cm.pushUrl.trim()) {
-        errors.push('command-room の接続先 URL が空です');
+        errors.push(`${UPSTREAM_BRAND.shortName} の接続先 URL が空です`);
       } else if (typeof cm.pushToken !== 'string' || !cm.pushToken.trim()) {
-        errors.push('command-room の接続トークンが空です');
+        errors.push(`${UPSTREAM_BRAND.shortName} の接続トークンが空です`);
       } else if (typeof cm.workspaceId !== 'string' || !cm.workspaceId.trim()) {
-        errors.push('command-room の workspaceId が空です');
+        errors.push(`${UPSTREAM_BRAND.shortName} の workspaceId が空です`);
       } else {
         setCommandRoomConfig({
           pushUrl: cm.pushUrl.trim(),

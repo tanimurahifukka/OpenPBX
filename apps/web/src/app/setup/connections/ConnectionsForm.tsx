@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { UPSTREAM_BRAND } from '@/lib/branding';
 
 interface Props {
   initialCr: { configured: boolean; pushUrl: string | null; workspaceId: string | null; hasToken: boolean };
@@ -128,9 +129,9 @@ export function ConnectionsForm({ initialCr, initialVb }: Props) {
     <div className="space-y-8">
       {/* ---- command-room ---- */}
       <section className="rounded-lg border border-slate-200 bg-white p-5">
-        <h3 className="text-sm font-bold text-slate-900">command-room 連携</h3>
+        <h3 className="text-sm font-bold text-slate-900">{UPSTREAM_BRAND.integrationLabel}</h3>
         <p className="mt-1 text-xs text-slate-500">
-          通話記録を command-room の対応カードに自動で送ります。設定しなくても OpenPBX 単体で内線・IVR・録音は使えます。
+          通話記録を {UPSTREAM_BRAND.shortName} の対応カードに自動で送ります。設定しなくても OpenPBX 単体で内線・IVR・録音は使えます。
         </p>
 
         {crSaved && (
@@ -157,13 +158,13 @@ export function ConnectionsForm({ initialCr, initialVb }: Props) {
             <textarea
               value={crCode}
               onChange={(e) => setCrCode(e.target.value)}
-              placeholder='command-room の管理画面から発行された接続コードを貼り付けてください'
+              placeholder={`${UPSTREAM_BRAND.shortName} の管理画面から発行された接続コードを貼り付けてください`}
               rows={3}
               className="mt-1 w-full rounded border border-slate-300 px-2 py-1 font-mono text-xs"
             />
           </label>
           <p className="text-xs text-slate-400">
-            接続コードは command-room の管理者に発行してもらってください。
+            接続コードは {UPSTREAM_BRAND.shortName} の管理者に発行してもらってください。
             JSON 形式、または openpbx-connect:// 形式のどちらにも対応しています。
           </p>
           <button

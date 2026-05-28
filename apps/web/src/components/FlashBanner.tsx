@@ -96,7 +96,7 @@ function suggestNextAction(message: string): string | null {
     return 'Asterisk が起動しているか、共有ボリュームの権限が正しいか確認してください。';
   }
   if (m.includes('command-room') || m.includes('event_push') || m.includes('送信')) {
-    return 'command-room の URL / device-token / ネットワーク到達性を確認してください。';
+    return 'CHIPS の URL / device-token / ネットワーク到達性を確認してください。';
   }
   // 汎用フォールバック
   return '同じ操作をもう一度試して、解消しない場合は管理者に画面のスクリーンショットを送ってください。';

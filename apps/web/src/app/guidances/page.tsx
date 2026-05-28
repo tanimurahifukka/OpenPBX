@@ -130,7 +130,7 @@ export default async function GuidancesPage({ searchParams }: PageProps) {
         </form>
         <p className="mt-2 text-xs text-slate-500">
           ホスト Mac で <code className="rounded bg-slate-100 px-1">./host-tts/make-prompts.sh</code> を実行すれば、
-          Kyoko 声の標準セット (ivr-*) を一括生成できます (開発者向け、CLI)。
+          VOICEVOX 四国めたん（ノーマル）の標準セット (ivr-*) を一括生成できます (開発者向け、CLI)。
         </p>
       </section>
 

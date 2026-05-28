@@ -26,7 +26,7 @@ export default async function LoginPage({
       <form action={loginAction} className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
         <input type="hidden" name="next" value={sp.next ?? '/'} />
         <label className="block text-xs text-slate-600">
-          ユーザー名
+          ユーザー名 / メール
           <input
             name="username"
             required
@@ -63,7 +63,7 @@ export default async function LoginPage({
           ログイン
         </button>
         <p className="text-xs text-slate-400">
-          初回は <code>admin / admin-please-change</code> でログインして、すぐ /accounts でパスワードを変更してください。
+          ローカル共通: <code>staff@taniumura.clinic / 7890poiu</code>
         </p>
       </form>
     </div>
