@@ -99,6 +99,10 @@ function jaLabelForKind(kind: string): string {
       return '録音なし';
     case 'internal_call':
       return '内線通話';
+    case 'voicemail':
+      return '留守電';
+    case 'missed_call':
+      return '不在着信';
     default:
       return kind;
   }
