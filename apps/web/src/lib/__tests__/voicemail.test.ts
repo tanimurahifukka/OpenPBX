@@ -7,9 +7,11 @@ import {
   countByStatus,
   deleteBox,
   deleteMessage,
+  getMessageByUniqueId,
   getBox,
   listBoxes,
   listMessages,
+  recordMessageFromEvent,
   renderVoicemailDialplan,
   updateBox,
   updateMessageStatus,
@@ -131,6 +133,30 @@ describe('voicemail message CRUD', () => {
     const msg = createMessage({ boxNumber: '9100', callerId: '090', uniqueId: 'u1' }, db);
     expect(deleteMessage(msg.id, db)).toBe(true);
     expect(listMessages({}, db)).toHaveLength(0);
+  });
+
+  it('records a message from an event idempotently', () => {
+    const first = recordMessageFromEvent({
+      boxNumber: '9100',
+      callerId: '09012345678',
+      callerName: '谷村',
+      uniqueId: 'u-event',
+      recordingFile: 'u-event.wav',
+    }, db);
+    const second = recordMessageFromEvent({
+      boxNumber: '9100',
+      callerId: '09012345678',
+      callerName: '谷村',
+      uniqueId: 'u-event',
+      recordingFile: 'u-event.wav',
+    }, db);
+    expect(first?.id).toBe(second?.id);
+    expect(getMessageByUniqueId('u-event', db)?.recordingFile).toBe('u-event.wav');
+    expect(listMessages({}, db)).toHaveLength(1);
+  });
+
+  it('returns null when event references a missing box', () => {
+    expect(recordMessageFromEvent({ boxNumber: '9999', callerId: '090', uniqueId: 'u1' }, db)).toBeNull();
   });
 
   it('rejects message for non-existent box', () => {

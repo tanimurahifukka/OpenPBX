@@ -324,7 +324,7 @@ function afterHoursTargetGoto(action: AfterHoursAction, target: string | null): 
   if (action === 'hangup') return null;
   if (action === 'goto_ivr' && target) return `Goto(ivr-${target},s,1)`;
   if (action === 'goto_extension' && target) return `Goto(internal,${target},1)`;
-  if (action === 'goto_voicemail' && target) return `VoiceMail(${target}@default,u)`;
+  if (action === 'goto_voicemail' && target) return `Goto(voicemail-${target},s,1)`;
   return null;
 }
 

@@ -193,7 +193,7 @@ function fallbackDialplan(g: RingGroup): string[] {
   const target = g.fallbackTarget;
   if (action === 'goto_extension' && target) return [`Goto(internal,${target},1)`];
   if (action === 'goto_ivr' && target) return [`Goto(ivr-${target},s,1)`];
-  if (action === 'goto_voicemail' && target) return [`VoiceMail(${target}@default,u)`, 'Hangup()'];
+  if (action === 'goto_voicemail' && target) return [`Goto(voicemail-${target},s,1)`];
   return ['Hangup()'];
 }
 
@@ -219,11 +219,11 @@ export function renderRingGroupDialplan(groups: RingGroup[]): string {
     if (g.strategy === 'ringall') {
       const dialString = g.members.map((m) => `PJSIP/${m}`).join('&');
       lines.push(`exten => ${g.number},1,NoOp(ring group ${g.number} ringall)`);
-      lines.push(` same => n,Dial(${dialString},${g.ringSeconds},tTm)`);
+      lines.push(` same => n,Dial(${dialString},${g.ringSeconds},tTkKm)`);
     } else {
       lines.push(`exten => ${g.number},1,NoOp(ring group ${g.number} linear)`);
       g.members.forEach((m) => {
-        lines.push(` same => n,Dial(PJSIP/${m},${g.ringSeconds},tTm)`);
+        lines.push(` same => n,Dial(PJSIP/${m},${g.ringSeconds},tTkKm)`);
       });
     }
     const fb = fallbackDialplan(g);

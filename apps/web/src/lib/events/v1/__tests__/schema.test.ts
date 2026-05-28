@@ -42,6 +42,8 @@ describe('schema enums', () => {
     expect(isEventKind('same_day_reservation')).toBe(true);
     expect(isEventKind('callback_request')).toBe(true);
     expect(isEventKind('no_recording')).toBe(true);
+    expect(isEventKind('voicemail')).toBe(true);
+    expect(isEventKind('missed_call')).toBe(true);
     expect(isEventKind('unknown')).toBe(false);
     expect(isEventKind(123)).toBe(false);
   });

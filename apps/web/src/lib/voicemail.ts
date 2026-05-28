@@ -202,6 +202,36 @@ export function createMessage(input: CreateMessageInput, db: Database.Database =
   );
 }
 
+export function getMessageByUniqueId(
+  uniqueId: string,
+  db: Database.Database = getDb(),
+): VoicemailMessage | null {
+  const row = db
+    .prepare('SELECT * FROM voicemail_messages WHERE unique_id = ?')
+    .get(uniqueId) as MessageRow | undefined;
+  return row ? msgRowTo(row) : null;
+}
+
+export function recordMessageFromEvent(
+  input: CreateMessageInput,
+  db: Database.Database = getDb(),
+): VoicemailMessage | null {
+  const box = getBox(input.boxNumber, db);
+  if (!box) return null;
+  db.prepare(
+    `INSERT OR IGNORE INTO voicemail_messages (box_id, caller_id, caller_name, unique_id, recording_file, duration_sec, status, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, 'new', datetime('now'))`,
+  ).run(
+    box.id,
+    input.callerId,
+    input.callerName ?? '',
+    input.uniqueId,
+    input.recordingFile ?? null,
+    input.durationSec ?? null,
+  );
+  return getMessageByUniqueId(input.uniqueId, db);
+}
+
 export function updateMessageStatus(
   id: number,
   status: VmMessageStatus,

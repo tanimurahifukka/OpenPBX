@@ -1,7 +1,15 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 import type Database from 'better-sqlite3';
 import { createInMemoryDb } from '../db';
-import { detectMissedCalls, recordMissedCallEvent, deduplicateByCaller, type MissedCall } from '../missedCalls';
+import {
+  buildMissedCallEvent,
+  detectMissedCalls,
+  enqueueMissedCallEvent,
+  recordMissedCallEvent,
+  deduplicateByCaller,
+  type MissedCall,
+} from '../missedCalls';
+import { getOutboxRow } from '../events/v1/outbox';
 
 let db: Database.Database;
 
@@ -57,7 +65,8 @@ describe('detectMissedCalls', () => {
 
   it('excludes already recorded events', () => {
     insertCdr(db, 'u1', '09012345678', '9000', 'NO ANSWER');
-    recordMissedCallEvent('u1', db);
+    expect(recordMissedCallEvent('u1', db)).toBe(true);
+    expect(recordMissedCallEvent('u1', db)).toBe(false);
     const missed = detectMissedCalls(5, db);
     expect(missed).toHaveLength(0);
   });
@@ -84,5 +93,39 @@ describe('deduplicateByCaller', () => {
     ];
     const result = deduplicateByCaller(calls, 5);
     expect(result).toHaveLength(2);
+  });
+});
+
+describe('missed call event outbox', () => {
+  const env = { pbxInstanceId: 'clinic-main', workspaceExternalKey: 'tamura-hifuka' };
+
+  it('builds a command-room-pbx/event/v1 missed_call payload', () => {
+    const event = buildMissedCallEvent({
+      uniqueid: 'u1',
+      src: '09012345678',
+      dst: '9000',
+      startAt: '2026-05-17 14:01:00',
+      disposition: 'NO ANSWER',
+    }, env);
+    expect(event.eventId).toBe('openpbx:clinic-main:u1');
+    expect(event.call.kind).toBe('missed_call');
+    expect(event.call.extension).toBe('9000');
+    expect(event.recording).toBeNull();
+    expect(event.receivedAt).toBe('2026-05-17T14:01:00Z');
+  });
+
+  it('enqueues missed_call once', () => {
+    const call: MissedCall = {
+      uniqueid: 'u1',
+      src: '09012345678',
+      dst: '9000',
+      startAt: '2026-05-17 14:01:00',
+      disposition: 'BUSY',
+    };
+    expect(enqueueMissedCallEvent(call, env, db)).toBe(true);
+    expect(enqueueMissedCallEvent(call, env, db)).toBe(false);
+    const row = getOutboxRow('openpbx:clinic-main:u1', db);
+    expect(row?.status).toBe('pending');
+    expect(JSON.parse(row?.payloadJson ?? '{}').call.kind).toBe('missed_call');
   });
 });

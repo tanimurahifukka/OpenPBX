@@ -21,6 +21,8 @@ services:
       - ./asterisk/logger.conf:/etc/asterisk/logger.conf:ro
       - ./asterisk/rtp.conf:/etc/asterisk/rtp.conf:ro
       - ./asterisk/manager.conf:/etc/asterisk/manager.conf.template:ro
+      - ./asterisk/features.conf:/etc/asterisk/features.conf:ro
+      - ./asterisk/res_parking.conf:/etc/asterisk/res_parking.conf:ro
       - ./asterisk/cdr.conf:/etc/asterisk/cdr.conf:ro
       - ./asterisk/http.conf:/etc/asterisk/http.conf:ro
       - ./asterisk/certs:/etc/asterisk/certs:ro

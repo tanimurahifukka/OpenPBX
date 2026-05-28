@@ -25,7 +25,9 @@ export function Softphone({ extensions }: SoftphoneProps) {
   const [selected, setSelected] = useState<ExtensionInfo | null>(extensions[0] ?? null);
   const [status, setStatus] = useState<string>('disconnected');
   const [target, setTarget] = useState<string>('');
+  const [transferTarget, setTransferTarget] = useState<string>('');
   const [host, setHost] = useState<string>(typeof window !== 'undefined' ? window.location.hostname : 'localhost');
+  const [isHeld, setIsHeld] = useState<boolean>(false);
   // SIP password はサーバから渡さず、登録のたびにユーザに入力させる。
   // メモリ上のみで保持し、disconnect 時にクリアする。
   const [sipPassword, setSipPassword] = useState<string>('');
@@ -94,6 +96,7 @@ export function Softphone({ extensions }: SoftphoneProps) {
       uaRef.current = null;
     }
     setSipPassword('');
+    setIsHeld(false);
     setStatus('disconnected');
   }
 
@@ -127,7 +130,62 @@ export function Softphone({ extensions }: SoftphoneProps) {
         /* ignore */
       }
       sessionRef.current = null;
+      setIsHeld(false);
       setStatus(uaRef.current ? '通話終了' : 'disconnected');
+    }
+  }
+
+  async function transfer() {
+    if (!sessionRef.current || !transferTarget || !window.SIP) return;
+    const uri = window.SIP.UserAgent.makeURI(`sip:${transferTarget}@${host}`);
+    if (!uri) {
+      setStatus('転送先が不正です');
+      return;
+    }
+    try {
+      if (typeof sessionRef.current.refer !== 'function') {
+        throw new Error('transfer unsupported by this SIP session');
+      }
+      await sessionRef.current.refer(uri);
+      setStatus(`転送しました: ${transferTarget}`);
+      setTransferTarget('');
+    } catch (e) {
+      setStatus(`転送失敗: ${(e as Error).message}`);
+    }
+  }
+
+  async function toggleHold() {
+    const session = sessionRef.current;
+    if (!session || !window.SIP) return;
+    const next = !isHeld;
+    try {
+      if (next && typeof session.hold === 'function') {
+        await session.hold();
+      } else if (!next && typeof session.unhold === 'function') {
+        await session.unhold();
+      } else if (typeof session.invite === 'function') {
+        const holdModifier = window.SIP.Web?.holdModifier ?? window.SIP.Web?.Modifiers?.holdModifier;
+        await session.invite({
+          sessionDescriptionHandlerModifiers: next && holdModifier ? [holdModifier] : [],
+        });
+      } else {
+        throw new Error('hold unsupported by this SIP session');
+      }
+      setIsHeld(next);
+      setStatus(next ? '保留中' : '通話中');
+    } catch (e) {
+      setStatus(`保留操作失敗: ${(e as Error).message}`);
+    }
+  }
+
+  async function park() {
+    const session = sessionRef.current;
+    if (!session) return;
+    try {
+      await sendDtmfSequence(session, '#7');
+      setStatus('パーク操作を送信しました');
+    } catch (e) {
+      setStatus(`パーク失敗: ${(e as Error).message}`);
     }
   }
 
@@ -211,9 +269,64 @@ export function Softphone({ extensions }: SoftphoneProps) {
           切る
         </button>
       </div>
+      <div className="grid grid-cols-[auto_auto_1fr_auto] gap-2">
+        <button
+          onClick={toggleHold}
+          type="button"
+          className="rounded border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"
+        >
+          {isHeld ? '保留解除' : '保留'}
+        </button>
+        <button
+          onClick={park}
+          type="button"
+          className="rounded border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"
+        >
+          パーク
+        </button>
+        <input
+          value={transferTarget}
+          onChange={(e) => setTransferTarget(e.target.value)}
+          placeholder="転送先 (例: 1002)"
+          className="rounded border border-slate-300 px-2 py-1 font-mono text-sm"
+        />
+        <button
+          onClick={transfer}
+          type="button"
+          className="rounded bg-primary px-3 py-1.5 text-xs font-semibold text-white"
+        >
+          転送
+        </button>
+      </div>
       <audio ref={audioRef} autoPlay />
     </section>
   );
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function sendDtmfSequence(session: any, seq: string): Promise<void> {
+  for (const tone of seq) {
+    await sendDtmf(session, tone);
+    await delay(140);
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function sendDtmf(session: any, tone: string): Promise<void> {
+  if (typeof session.dtmf === 'function') {
+    await session.dtmf(tone);
+    return;
+  }
+  const sdh = session.sessionDescriptionHandler;
+  if (typeof sdh?.sendDtmf === 'function') {
+    sdh.sendDtmf(tone);
+    return;
+  }
+  throw new Error(`DTMF ${tone} could not be sent`);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

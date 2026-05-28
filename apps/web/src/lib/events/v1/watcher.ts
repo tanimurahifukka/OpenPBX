@@ -15,7 +15,8 @@ import {
   upsertPending,
   type OutboxStatus,
 } from './outbox';
-import { type OpenpbxEventV1, isLegacyMeta } from './schema';
+import { type OpenpbxEventV1, type OpenpbxLegacyMetaV0, isLegacyMeta } from './schema';
+import { recordMessageFromEvent } from '../../voicemail';
 
 function envOr(name: string, fallback: string): string {
   const v = process.env[name];
@@ -93,6 +94,24 @@ function isLikelyLegacyMetaFilename(name: string): boolean {
   return name.endsWith('.meta.json');
 }
 
+function recordVoicemailSideEffect(legacy: OpenpbxLegacyMetaV0): void {
+  if (legacy.kind !== 'voicemail') return;
+  try {
+    const msg = recordMessageFromEvent({
+      boxNumber: legacy.extension,
+      callerId: legacy.callerId,
+      callerName: legacy.callerName,
+      uniqueId: legacy.uniqueId,
+      recordingFile: legacy.recordingFile || undefined,
+    });
+    if (!msg) {
+      console.warn('[event-v1] voicemail box not found for event', legacy.extension, legacy.uniqueId);
+    }
+  } catch (e) {
+    console.warn('[event-v1] voicemail record failed', legacy.uniqueId, (e as Error).message);
+  }
+}
+
 // In-memory mtime cursor。プロセス起動時はリセットされ全走査するが、その後は
 // この時刻より新しい meta.json のみを対象にして毎 tick の I/O を抑える。
 // 冪等性は outbox ファイル存在チェック + upsertPending の ON CONFLICT で別途担保。
@@ -162,6 +181,8 @@ export async function processOnce(
       result.errors += 1;
       continue;
     }
+
+    recordVoicemailSideEffect(raw);
 
     if (event.recording && cfg.computeRecordingMetrics) {
       const wavPath = path.join(cfg.recordingsDir, event.recording.fileName);

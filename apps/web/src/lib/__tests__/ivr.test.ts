@@ -184,15 +184,15 @@ describe('renderIvrDialplan', () => {
     expect(out).not.toContain('exten => cid-');
   });
 
-  it('after-hours goto_voicemail emits VoiceMail application', () => {
+  it('after-hours goto_voicemail routes into generated voicemail context', () => {
     const out = renderIvrDialplan([
       fixtureMenu({ afterHoursAction: 'goto_voicemail', afterHoursTarget: '1001' }),
     ]);
-    expect(out).toContain('VoiceMail(1001@default,u)');
+    expect(out).toContain('Goto(voicemail-1001,s,1)');
     expect(out).toContain('Hangup()');
   });
 
-  it('after-hours goto_voicemail plays goodbye prompt before voicemail', () => {
+  it('after-hours goto_voicemail plays goodbye prompt before voicemail context', () => {
     const out = renderIvrDialplan([
       fixtureMenu({
         afterHoursAction: 'goto_voicemail',
@@ -202,7 +202,7 @@ describe('renderIvrDialplan', () => {
     ]);
     const lines = out.split('\n');
     const goodbyeIdx = lines.findIndex((l) => l.includes('Playback(custom/ivr-goodbye)'));
-    const vmIdx = lines.findIndex((l) => l.includes('VoiceMail(1001@default,u)'));
+    const vmIdx = lines.findIndex((l) => l.includes('Goto(voicemail-1001,s,1)'));
     expect(goodbyeIdx).toBeGreaterThan(-1);
     expect(vmIdx).toBeGreaterThan(goodbyeIdx);
   });

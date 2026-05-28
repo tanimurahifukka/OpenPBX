@@ -77,6 +77,47 @@ describe('upgradeLegacyEvent → fixtures (ゴールデン)', () => {
     expect(v1.recording).toBeNull();
     expect(v1.call.calleeExtension).toBeNull();
   });
+
+  it('voicemail: 留守電イベントを inbound + recording ありで upgrade する', () => {
+    const v1 = upgradeLegacyEvent(
+      {
+        schema: SCHEMA_ID_LEGACY,
+        source: 'asterisk',
+        kind: 'voicemail',
+        extension: '9100',
+        callerId: '09012345678',
+        callerName: 'Customer',
+        uniqueId: '1779019900.1',
+        recordingFile: '1779019900.1-vm-9100-09012345678.wav',
+        receivedAt: '2026-05-17T14:00:00Z',
+      },
+      env,
+    );
+    expect(v1.call.kind).toBe('voicemail');
+    expect(v1.call.direction).toBe('inbound');
+    expect(v1.call.calleeExtension).toBe('9100');
+    expect(v1.recording?.fileName).toBe('1779019900.1-vm-9100-09012345678.wav');
+  });
+
+  it('missed_call: 録音なしイベントを inbound として upgrade する', () => {
+    const v1 = upgradeLegacyEvent(
+      {
+        schema: SCHEMA_ID_LEGACY,
+        source: 'asterisk',
+        kind: 'missed_call',
+        extension: '9000',
+        callerId: '09012345678',
+        callerName: '',
+        uniqueId: '1779019901.1',
+        recordingFile: '',
+        receivedAt: '2026-05-17T14:01:00Z',
+      },
+      env,
+    );
+    expect(v1.call.kind).toBe('missed_call');
+    expect(v1.call.direction).toBe('inbound');
+    expect(v1.recording).toBeNull();
+  });
 });
 
 describe('upgradeLegacyEvent invariants', () => {

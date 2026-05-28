@@ -1,5 +1,12 @@
 import type Database from 'better-sqlite3';
 import { getDb } from './db';
+import { upsertPending } from './events/v1/outbox';
+import {
+  SCHEMA_ID_V1,
+  assertOpenpbxEventV1,
+  buildEventId,
+  type OpenpbxEventV1,
+} from './events/v1/schema';
 
 export interface MissedCall {
   uniqueid: string;
@@ -44,10 +51,11 @@ export function detectMissedCalls(
 export function recordMissedCallEvent(
   uniqueid: string,
   db: Database.Database = getDb(),
-): void {
-  db.prepare(
+): boolean {
+  const info = db.prepare(
     `INSERT OR IGNORE INTO missed_call_events (uniqueid, created_at) VALUES (?, datetime('now'))`,
   ).run(uniqueid);
+  return info.changes > 0;
 }
 
 export function deduplicateByCaller(calls: MissedCall[], windowMinutes: number = 5): MissedCall[] {
@@ -91,4 +99,66 @@ export function listMissedCallEvents(
     disposition: r.disposition,
     createdAt: r.created_at,
   }));
+}
+
+export interface MissedCallEventEnv {
+  pbxInstanceId: string;
+  workspaceExternalKey: string;
+}
+
+function resolveMissedCallEventEnv(): MissedCallEventEnv {
+  return {
+    pbxInstanceId: process.env.OPENPBX_INSTANCE_ID || 'pbx-dev',
+    workspaceExternalKey: process.env.OPENPBX_WORKSPACE_KEY || 'workspace-dev',
+  };
+}
+
+function receivedAtIso(startAt: string): string {
+  const trimmed = startAt.trim();
+  if (/^\d{4}-\d{2}-\d{2}T/.test(trimmed)) {
+    const d = new Date(trimmed);
+    if (!Number.isNaN(d.getTime())) return d.toISOString();
+  }
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(trimmed)) {
+    return `${trimmed.replace(' ', 'T')}Z`;
+  }
+  const d = new Date(trimmed);
+  return Number.isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+}
+
+export function buildMissedCallEvent(
+  call: MissedCall,
+  env: MissedCallEventEnv = resolveMissedCallEventEnv(),
+): OpenpbxEventV1 {
+  const extension = call.dst || 'unknown';
+  const event: OpenpbxEventV1 = {
+    schema: SCHEMA_ID_V1,
+    eventId: buildEventId(env.pbxInstanceId, call.uniqueid),
+    source: 'openpbx',
+    pbxInstanceId: env.pbxInstanceId,
+    workspaceExternalKey: env.workspaceExternalKey,
+    call: {
+      uniqueId: call.uniqueid,
+      kind: 'missed_call',
+      direction: 'inbound',
+      extension,
+      callerId: call.src,
+      callerName: '',
+      calleeExtension: call.dst || null,
+      durationSec: 0,
+    },
+    recording: null,
+    receivedAt: receivedAtIso(call.startAt),
+  };
+  assertOpenpbxEventV1(event);
+  return event;
+}
+
+export function enqueueMissedCallEvent(
+  call: MissedCall,
+  env: MissedCallEventEnv = resolveMissedCallEventEnv(),
+  db: Database.Database = getDb(),
+): boolean {
+  const event = buildMissedCallEvent(call, env);
+  return upsertPending(event.eventId, event, db);
 }

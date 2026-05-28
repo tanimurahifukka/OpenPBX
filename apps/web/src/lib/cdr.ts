@@ -6,7 +6,7 @@
 import fs from 'node:fs/promises';
 import fssync from 'node:fs';
 import { getDb } from './db';
-import { detectMissedCalls, deduplicateByCaller, recordMissedCallEvent } from './missedCalls';
+import { detectMissedCalls, deduplicateByCaller, enqueueMissedCallEvent, recordMissedCallEvent } from './missedCalls';
 
 const CSV_PATH = process.env.CDR_CSV_PATH ?? '/app/data/asterisk-cdr/Master.csv';
 
@@ -309,7 +309,8 @@ export function startCdrIngestLoop(): void {
         try {
           const missed = deduplicateByCaller(detectMissedCalls(2));
           for (const call of missed) {
-            recordMissedCallEvent(call.uniqueid);
+            const inserted = recordMissedCallEvent(call.uniqueid);
+            if (inserted) enqueueMissedCallEvent(call);
           }
           if (missed.length > 0) {
             console.log(`[cdr] detected ${missed.length} missed call(s)`);

@@ -234,7 +234,7 @@ export function renderTrunksDialplan(): string {
       if (!t.outboundPrefix) continue;
       lines.push(`; --- outbound via ${t.name} prefix ${t.outboundPrefix} ---`);
       lines.push(`exten => _${t.outboundPrefix}X.,1,NoOp(outbound via ${t.name})`);
-      lines.push(` same => n,Dial(PJSIP/\${EXTEN}@${t.name},60)`);
+      lines.push(` same => n,Dial(PJSIP/\${EXTEN}@${t.name},60,tTkK)`);
       lines.push(' same => n,Hangup()');
     }
     lines.push('');

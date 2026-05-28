@@ -82,12 +82,16 @@ describe('renderRingGroupDialplan fallback', () => {
     expect(out).toContain('Goto(ivr-9000,s,1)');
   });
 
-  it('renders goto_voicemail fallback', () => {
+  it('renders goto_voicemail fallback into generated voicemail context', () => {
     const out = renderRingGroupDialplan([fixture({
       fallbackAction: 'goto_voicemail',
       fallbackTarget: '9100',
     })]);
-    expect(out).toContain('VoiceMail(9100@default,u)');
-    expect(out).toContain('Hangup()');
+    expect(out).toContain('Goto(voicemail-9100,s,1)');
+  });
+
+  it('enables transfer and parking feature flags on ring group Dial', () => {
+    const out = renderRingGroupDialplan([fixture()]);
+    expect(out).toContain('Dial(PJSIP/1001&PJSIP/1002,30,tTkKm)');
   });
 });
