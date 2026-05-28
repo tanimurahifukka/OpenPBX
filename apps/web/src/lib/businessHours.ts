@@ -213,3 +213,40 @@ export async function writeBusinessHoursAndReload(): Promise<void> {
   await writeDialplanFile('business-hours.conf', content);
   await signalAsteriskReload();
 }
+
+// ---- business-hours check (Edge Fleet PBX Safety Kernel — ADR 0018 §D) ----
+//
+// Pure-ish predicate consumed by the Fleet preflight: cr-stack calls
+// GET /api/internal/pbx-status, which calls this to decide whether a
+// `pbxBusinessHourRestartGuard` should defer a restart. Local server time is
+// authoritative (the OpenPBX box runs at the site).
+//
+// Semantics:
+//   - A configured holiday for today  => closed => NOT within business hours.
+//   - No time_rules configured at all  => returns false (no protected hours
+//     declared, so updates are allowed). Configure rules to protect a window.
+//   - Otherwise within business hours iff today's weekday + current HH:MM
+//     falls inside any rule (overnight ranges where start > end are handled).
+export function isWithinBusinessHours(
+  now: Date = new Date(),
+  db: Database.Database = getDb(),
+): boolean {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const todayIso = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  if (listHolidays(db).some((h) => h.date === todayIso)) return false;
+
+  const rules = listTimeRules(db);
+  if (rules.length === 0) return false;
+
+  const today = WEEK[(now.getDay() + 6) % 7]; // getDay: 0=Sun -> WEEK index
+  const cur = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+
+  return rules.some((r) => {
+    if (!asteriskToDays(r.days).includes(today)) return false;
+    if (r.startTime <= r.endTime) {
+      return cur >= r.startTime && cur <= r.endTime;
+    }
+    // Overnight window (e.g. 22:00-06:00).
+    return cur >= r.startTime || cur <= r.endTime;
+  });
+}
