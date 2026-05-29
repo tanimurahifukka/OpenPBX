@@ -94,4 +94,9 @@ describe('renderRingGroupDialplan fallback', () => {
     const out = renderRingGroupDialplan([fixture()]);
     expect(out).toContain('Dial(PJSIP/1001&PJSIP/1002,30,tTkKm)');
   });
+
+  it('sets the music-on-hold class before dialling so held callers hear music', () => {
+    const out = renderRingGroupDialplan([fixture()]);
+    expect(out).toContain('Set(CHANNEL(musicclass)=default)');
+  });
 });
