@@ -10,7 +10,7 @@ import { detectMissedCalls, deduplicateByCaller, enqueueMissedCallEvent, recordM
 
 const CSV_PATH = process.env.CDR_CSV_PATH ?? '/app/data/asterisk-cdr/Master.csv';
 
-interface CdrRow {
+export interface CdrRow {
   accountcode: string;
   src: string;
   dst: string;
@@ -46,7 +46,7 @@ const FIELDS_17 = [
   'disposition', 'amaflag', 'uniqueid',
 ] as const;
 
-function parseCsvLine(line: string): string[] {
+export function parseCsvLine(line: string): string[] {
   const out: string[] = [];
   let cur = '';
   let inQuote = false;
@@ -75,7 +75,7 @@ function parseCsvLine(line: string): string[] {
   return out;
 }
 
-function rowFromCols(cols: string[]): CdrRow | null {
+export function rowFromCols(cols: string[]): CdrRow | null {
   const row = {} as Record<string, string>;
   let fields: readonly string[];
   if (cols.length >= 18) fields = FIELDS_18;
