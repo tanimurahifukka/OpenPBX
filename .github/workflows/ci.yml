@@ -23,11 +23,20 @@ jobs:
       - name: Install
         run: npm ci --no-audit --no-fund
 
-      - name: Type check + build
-        run: npm run build
-
+      # Tests run first: the constitution requires the test suite to pass
+      # before any other quality check.
       - name: Test
         run: npm test
 
+      # Fast standalone type signal (does not wait for the full Next build).
+      - name: Type check
+        run: npm run typecheck
+
+      # Smoke build (also exercises the Next.js type layer / route validation).
+      - name: Build
+        run: npm run build
+
+      # Lint stays non-blocking: `next lint` is deprecated and ESLint is not
+      # yet configured in this repo (flat-config migration is a separate task).
       - name: Lint
-        run: npm run lint || true # MVP 期間中は警告止め
+        run: npm run lint || true
