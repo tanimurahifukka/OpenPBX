@@ -64,6 +64,11 @@ describe('renderTrunksDialplan', () => {
     expect(out).toContain('Goto(internal,0312345678,1)');
   });
 
+  it('checks the blacklist before routing an inbound DID', () => {
+    const out = renderTrunksDialplan([trunk({ didInbound: '0312345678' })]);
+    expect(out).toContain('Gosub(blacklist-check,s,1)');
+  });
+
   it('always emits a catch-all _X. hangup in from-trunk', () => {
     const out = renderTrunksDialplan([trunk()]);
     expect(out).toContain('[from-trunk]');

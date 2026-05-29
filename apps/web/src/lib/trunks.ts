@@ -217,6 +217,8 @@ export function renderTrunksDialplan(trunks: SipTrunk[] = listTrunks()): string 
     if (t.didInbound) {
       lines.push(`; --- inbound for ${t.name} -> ${t.didInbound} ---`);
       lines.push(`exten => ${t.didInbound},1,NoOp(inbound from ${t.name})`);
+      // 着信拒否チェック (blocked なら blacklist-check 内で Hangup し戻らない)。
+      lines.push(' same => n,Gosub(blacklist-check,s,1)');
       lines.push(` same => n,Goto(internal,${t.didInbound},1)`);
     }
   }

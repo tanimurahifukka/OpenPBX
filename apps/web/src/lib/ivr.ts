@@ -338,7 +338,7 @@ function callerIdRouteGoto(
   return null;
 }
 
-function callerIdMatchExpr(pattern: string): string {
+export function callerIdMatchExpr(pattern: string): string {
   if (pattern.endsWith('*')) {
     const prefix = pattern.slice(0, -1);
     return `$["\${CALLERID(num):0:${prefix.length}}"="${prefix}"]`;

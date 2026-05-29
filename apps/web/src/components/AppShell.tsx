@@ -59,6 +59,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     title: '管理',
     items: [
+      { href: '/blacklist', label: '着信拒否', minRole: 'supervisor' },
       { href: '/audit', label: '監査ログ', minRole: 'supervisor' },
       { href: '/accounts', label: 'アカウント', minRole: 'admin' },
     ],

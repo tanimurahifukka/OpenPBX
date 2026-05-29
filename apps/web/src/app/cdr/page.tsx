@@ -1,6 +1,8 @@
 import { listCdr, startCdrIngestLoop } from '@/lib/cdr';
 import { formatJst, toIsoUtc } from '@/lib/datetime';
 import { requireAccount } from '@/lib/auth';
+import { blockFromCdrAction } from '@/app/actions';
+import { ConfirmButton } from '@/components/ConfirmButton';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -93,6 +95,7 @@ export default async function CdrPage({ searchParams }: { searchParams: Promise<
                 <th className="px-2 py-2 text-right">うち応答</th>
                 <th className="px-2 py-2 text-left">結果</th>
                 <th className="px-2 py-2 text-left text-slate-400">ID</th>
+                <th className="px-2 py-2 text-right">操作</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
@@ -123,6 +126,22 @@ export default async function CdrPage({ searchParams }: { searchParams: Promise<
                     </span>
                   </td>
                   <td className="px-2 py-1 font-mono text-xs text-slate-500">{r.uniqueid}</td>
+                  <td className="px-2 py-1 text-right">
+                    {r.src ? (
+                      <form action={blockFromCdrAction}>
+                        <input type="hidden" name="number" value={r.src} />
+                        <ConfirmButton
+                          confirmText={`${r.src} を着信拒否に追加しますか？`}
+                          className="rounded border border-danger bg-white px-2 py-0.5 text-xs font-medium text-danger hover:bg-danger-light focus:outline-none focus:ring-2 focus:ring-danger"
+                          aria-label={`${r.src} を着信拒否に追加`}
+                        >
+                          ブロック
+                        </ConfirmButton>
+                      </form>
+                    ) : (
+                      <span className="text-xs text-slate-300">—</span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

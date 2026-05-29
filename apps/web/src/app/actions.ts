@@ -27,6 +27,7 @@ import {
 } from '@/lib/auth';
 import { isIpAllowed } from '@/lib/policy';
 import { generateSecret, verifyTotp } from '@/lib/totp';
+import { addToBlacklist, deleteBlacklistEntry, writeBlacklistDialplanAndReload } from '@/lib/blacklist';
 import {
   createExtension,
   updateExtension,
@@ -168,6 +169,41 @@ export async function deleteExtensionAction(formData: FormData): Promise<void> {
     deleteExtension(number);
     await writePjsipConfigAndReload();
     recordAudit({ actor: me.username, action: 'extension.delete', target: number });
+  });
+}
+
+// ---- blacklist (着信拒否) ----
+export async function addBlacklistAction(formData: FormData): Promise<void> {
+  await flash('/blacklist', '着信拒否に追加しました', async () => {
+    const me = await requireRole('admin', 'supervisor');
+    const number = s(formData.get('number'));
+    if (!number) throw new Error('番号が指定されていません');
+    addToBlacklist({ number, reason: s(formData.get('reason')) || null });
+    await writeBlacklistDialplanAndReload();
+    recordAudit({ actor: me.username, action: 'blacklist.add', target: number });
+  });
+}
+
+export async function deleteBlacklistAction(formData: FormData): Promise<void> {
+  await flash('/blacklist', '着信拒否から削除しました', async () => {
+    const me = await requireRole('admin', 'supervisor');
+    const number = s(formData.get('number'));
+    if (!number) throw new Error('番号が指定されていません');
+    deleteBlacklistEntry(number);
+    await writeBlacklistDialplanAndReload();
+    recordAudit({ actor: me.username, action: 'blacklist.delete', target: number });
+  });
+}
+
+// 通話履歴 (/cdr) の行から発信元番号をワンタップでブロックする。履歴ページに留まる。
+export async function blockFromCdrAction(formData: FormData): Promise<void> {
+  await flash('/cdr', '着信拒否に追加しました', async () => {
+    const me = await requireRole('admin', 'supervisor');
+    const number = s(formData.get('number'));
+    if (!number) throw new Error('番号が指定されていません');
+    addToBlacklist({ number, reason: '通話履歴からブロック' });
+    await writeBlacklistDialplanAndReload();
+    recordAudit({ actor: me.username, action: 'blacklist.add', target: number });
   });
 }
 

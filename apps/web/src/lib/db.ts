@@ -279,6 +279,14 @@ CREATE TABLE IF NOT EXISTS missed_call_events (
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS blacklist (
+  number      TEXT PRIMARY KEY,          -- 着信を拒否する発信者番号。末尾 * で前方一致
+  reason      TEXT,
+  hits        INTEGER NOT NULL DEFAULT 0,
+  created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS voicemail_boxes (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   number      TEXT NOT NULL UNIQUE,
@@ -500,6 +508,16 @@ export function getDb(): Database.Database {
       console.log('[db] CDR ingest loop started');
     } catch (e) {
       console.warn('[db] CDR ingest loop start failed', e);
+    }
+    try {
+      // 着信拒否 (blacklist) dialplan を起動時に書き出す。[blacklist-check] context が
+      // 常に存在しないと from-trunk の Gosub(blacklist-check,s,1) が失敗するため。
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { writeBlacklistDialplanAndReload } = require('./blacklist') as typeof import('./blacklist');
+      await writeBlacklistDialplanAndReload();
+      console.log('[db] blacklist dialplan initialized on startup');
+    } catch (e) {
+      console.warn('[db] blacklist dialplan initial sync failed', e);
     }
     try {
       // command-room-pbx/event/v1 への upgrade ループ。data/inbox/*.meta.json を tail し
