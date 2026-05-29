@@ -38,6 +38,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: '/', label: '概要' },
       { href: '/devices', label: '端末状態' },
+      { href: '/parking', label: '駐車中の通話' },
       { href: '/cdr', label: '通話履歴' },
       { href: '/recordings', label: '録音' },
       { href: '/voicemail', label: '留守電' },

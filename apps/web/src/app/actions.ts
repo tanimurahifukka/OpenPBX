@@ -28,6 +28,7 @@ import {
 import { isIpAllowed } from '@/lib/policy';
 import { generateSecret, verifyTotp } from '@/lib/totp';
 import { addToBlacklist, deleteBlacklistEntry, writeBlacklistDialplanAndReload } from '@/lib/blacklist';
+import { retrieveParkedCall } from '@/lib/parking';
 import {
   createExtension,
   updateExtension,
@@ -192,6 +193,18 @@ export async function deleteBlacklistAction(formData: FormData): Promise<void> {
     deleteBlacklistEntry(number);
     await writeBlacklistDialplanAndReload();
     recordAudit({ actor: me.username, action: 'blacklist.delete', target: number });
+  });
+}
+
+// ---- parking (駐車通話の取り出し) ----
+export async function retrieveParkedCallAction(formData: FormData): Promise<void> {
+  await flash('/parking', '通話を取り出しています', async () => {
+    const me = await requireAccount();
+    const slot = s(formData.get('slot'));
+    const toExtension = s(formData.get('toExtension'));
+    if (!slot || !toExtension) throw new Error('スロットと取り出し先内線を指定してください');
+    await retrieveParkedCall(slot, toExtension);
+    recordAudit({ actor: me.username, action: 'parking.retrieve', target: `${slot}->${toExtension}` });
   });
 }
 
