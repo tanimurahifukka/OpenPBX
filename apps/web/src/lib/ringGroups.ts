@@ -1,6 +1,7 @@
 import type Database from 'better-sqlite3';
 import { getDb } from './db';
 import { writeDialplanFile, signalAsteriskReload } from './dialplan';
+import { renderMohSetLine } from './moh';
 
 export type RingStrategy = 'ringall' | 'linear';
 export type FallbackAction = 'goto_extension' | 'goto_ivr' | 'goto_voicemail' | 'hangup';
@@ -219,9 +220,11 @@ export function renderRingGroupDialplan(groups: RingGroup[]): string {
     if (g.strategy === 'ringall') {
       const dialString = g.members.map((m) => `PJSIP/${m}`).join('&');
       lines.push(`exten => ${g.number},1,NoOp(ring group ${g.number} ringall)`);
+      lines.push(` same => n,${renderMohSetLine()}`);
       lines.push(` same => n,Dial(${dialString},${g.ringSeconds},tTkKm)`);
     } else {
       lines.push(`exten => ${g.number},1,NoOp(ring group ${g.number} linear)`);
+      lines.push(` same => n,${renderMohSetLine()}`);
       g.members.forEach((m) => {
         lines.push(` same => n,Dial(PJSIP/${m},${g.ringSeconds},tTkKm)`);
       });

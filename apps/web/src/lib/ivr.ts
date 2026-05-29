@@ -12,6 +12,7 @@ import {
   type CallerIdRouteAction,
   type IvrAction,
   type IvrMenu,
+  type IvrNextAction,
   type IvrOption,
   type UpsertCallerIdRoute,
 } from './ivr-format';
@@ -22,6 +23,7 @@ export type {
   CallerIdRouteAction,
   IvrAction,
   IvrMenu,
+  IvrNextAction,
   IvrOption,
   UpsertCallerIdRoute,
 };
@@ -42,8 +44,12 @@ const IVR_ACTIONS: ReadonlyArray<IvrAction> = [
   'goto_ringgroup',
   'goto_ivr',
   'send_sms',
+  'play_guidance',
+  'record_message',
+  'business_hours_branch',
   'hangup',
 ];
+const NEXT_ACTIONS: ReadonlyArray<IvrNextAction> = ['return_menu', 'hangup'];
 const AFTER_HOURS_ACTIONS: ReadonlyArray<AfterHoursAction> = [
   'goto_ivr',
   'goto_extension',
@@ -83,14 +89,33 @@ interface OptionRow {
   action: IvrAction;
   target: string | null;
   label: string | null;
+  next_action: IvrNextAction | null;
+  record_max_seconds: number | null;
+  record_intro_path: string | null;
+  open_action: AfterHoursAction | null;
+  open_target: string | null;
+  closed_action: AfterHoursAction | null;
+  closed_target: string | null;
 }
 
 function loadOptions(menuId: number, db: Database.Database): IvrOption[] {
   return (
     db
-      .prepare('SELECT digit, action, target, label FROM ivr_options WHERE ivr_menu_id = ? ORDER BY rowid ASC')
+      .prepare(
+        'SELECT digit, action, target, label, next_action, record_max_seconds, record_intro_path, open_action, open_target, closed_action, closed_target FROM ivr_options WHERE ivr_menu_id = ? ORDER BY rowid ASC',
+      )
       .all(menuId) as OptionRow[]
-  ).map((r) => ({ digit: r.digit, action: r.action, target: r.target, label: r.label }));
+  ).map((r) => {
+    const o: IvrOption = { digit: r.digit, action: r.action, target: r.target, label: r.label };
+    if (r.next_action != null) o.nextAction = r.next_action;
+    if (r.record_max_seconds != null) o.recordMaxSeconds = r.record_max_seconds;
+    if (r.record_intro_path != null) o.recordIntroPath = r.record_intro_path;
+    if (r.open_action != null) o.openAction = r.open_action;
+    if (r.open_target != null) o.openTarget = r.open_target;
+    if (r.closed_action != null) o.closedAction = r.closed_action;
+    if (r.closed_target != null) o.closedTarget = r.closed_target;
+    return o;
+  });
 }
 
 interface CallerIdRouteRow {
@@ -202,6 +227,40 @@ function validate(i: UpsertIvrInput): void {
         }
       }
     }
+    if (o.action === 'play_guidance') {
+      if (!o.target || !PROMPT_RE.test(o.target)) {
+        throw new InvalidIvrError(`ガイダンス再生のパスが不正: ${o.target}`);
+      }
+      if (o.nextAction != null && !NEXT_ACTIONS.includes(o.nextAction)) {
+        throw new InvalidIvrError(`ガイダンス後の動作が不正: ${o.nextAction}`);
+      }
+    }
+    if (o.action === 'record_message') {
+      if (
+        o.recordMaxSeconds != null &&
+        (!Number.isInteger(o.recordMaxSeconds) || o.recordMaxSeconds < 5 || o.recordMaxSeconds > 300)
+      ) {
+        throw new InvalidIvrError('録音秒数は 5〜300 の整数で指定してください');
+      }
+      if (o.recordIntroPath && !PROMPT_RE.test(o.recordIntroPath)) {
+        throw new InvalidIvrError(`録音前アナウンスのパスが不正: ${o.recordIntroPath}`);
+      }
+    }
+    if (o.action === 'business_hours_branch') {
+      const branches: Array<[string, AfterHoursAction | null | undefined, string | null | undefined]> = [
+        ['営業時間内', o.openAction, o.openTarget],
+        ['営業時間外', o.closedAction, o.closedTarget],
+      ];
+      for (const [label, action, target] of branches) {
+        const act = action ?? 'hangup';
+        if (!AFTER_HOURS_ACTIONS.includes(act)) {
+          throw new InvalidIvrError(`${label}のアクションが不正: ${act}`);
+        }
+        if (act !== 'hangup' && (!target || !NUMBER_RE.test(target))) {
+          throw new InvalidIvrError(`${label}の転送先が不正: ${target}`);
+        }
+      }
+    }
   }
   if (i.afterHoursAction) {
     if (!AFTER_HOURS_ACTIONS.includes(i.afterHoursAction)) {
@@ -233,9 +292,49 @@ function validate(i: UpsertIvrInput): void {
   }
 }
 
+// goto_ivr の参照を辿って循環 (A→A / A→B→A …) があるか検出する。
+// menus は候補以外の既存メニュー、candidate は新規/更新後のメニュー。
+// 候補から到達できる goto_ivr 経路に後退辺があれば true。
+export function detectIvrLoop(
+  menus: IvrMenu[],
+  candidate: { number: string; options: IvrOption[] },
+): boolean {
+  const edges = new Map<string, Set<string>>();
+  const addEdges = (from: string, opts: IvrOption[]) => {
+    const targets = new Set<string>();
+    for (const o of opts) {
+      if (o.action === 'goto_ivr' && o.target) targets.add(o.target);
+    }
+    edges.set(from, targets);
+  };
+  for (const m of menus) {
+    if (m.number === candidate.number) continue; // 候補が上書きする
+    addEdges(m.number, m.options);
+  }
+  addEdges(candidate.number, candidate.options);
+
+  const GRAY = 1;
+  const BLACK = 2;
+  const color = new Map<string, number>();
+  const dfs = (node: string): boolean => {
+    color.set(node, GRAY);
+    for (const next of edges.get(node) ?? []) {
+      const c = color.get(next);
+      if (c === GRAY) return true; // 後退辺 = 循環
+      if (c === undefined && dfs(next)) return true;
+    }
+    color.set(node, BLACK);
+    return false;
+  };
+  return dfs(candidate.number);
+}
+
 export function createIvrMenu(input: UpsertIvrInput, db: Database.Database = getDb()): IvrMenu {
   validate(input);
   if (getIvrMenu(input.number, db)) throw new InvalidIvrError(`IVR ${input.number} は既存`);
+  if (detectIvrLoop(listIvrMenus(db), { number: input.number, options: input.options })) {
+    throw new InvalidIvrError('goto_ivr が循環しています (例: A→B→A)。参照先を見直してください');
+  }
   const info = db
     .prepare(
       `INSERT INTO ivr_menus (number, name, welcome_prompt, menu_prompt, invalid_prompt, goodbye_prompt,
@@ -263,6 +362,9 @@ export function updateIvrMenu(input: UpsertIvrInput, db: Database.Database = get
   validate(input);
   const existing = getIvrMenu(input.number, db);
   if (!existing) throw new InvalidIvrError(`IVR ${input.number} は存在しません`);
+  if (detectIvrLoop(listIvrMenus(db), { number: input.number, options: input.options })) {
+    throw new InvalidIvrError('goto_ivr が循環しています (例: A→B→A)。参照先を見直してください');
+  }
   db.prepare(
     `UPDATE ivr_menus
         SET name = ?, welcome_prompt = ?, menu_prompt = ?, invalid_prompt = ?, goodbye_prompt = ?,
@@ -294,10 +396,23 @@ function replaceOptions(menuId: number, options: IvrOption[], db: Database.Datab
   const tx = db.transaction((opts: IvrOption[]) => {
     db.prepare('DELETE FROM ivr_options WHERE ivr_menu_id = ?').run(menuId);
     const ins = db.prepare(
-      'INSERT INTO ivr_options (ivr_menu_id, digit, action, target, label) VALUES (?, ?, ?, ?, ?)',
+      'INSERT INTO ivr_options (ivr_menu_id, digit, action, target, label, next_action, record_max_seconds, record_intro_path, open_action, open_target, closed_action, closed_target) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     );
     for (const o of opts) {
-      ins.run(menuId, o.digit, o.action, o.target ?? null, o.label ?? null);
+      ins.run(
+        menuId,
+        o.digit,
+        o.action,
+        o.target ?? null,
+        o.label ?? null,
+        o.nextAction ?? null,
+        o.recordMaxSeconds ?? null,
+        o.recordIntroPath ?? null,
+        o.openAction ?? null,
+        o.openTarget ?? null,
+        o.closedAction ?? null,
+        o.closedTarget ?? null,
+      );
     }
   });
   tx(options);
@@ -338,7 +453,7 @@ function callerIdRouteGoto(
   return null;
 }
 
-function callerIdMatchExpr(pattern: string): string {
+export function callerIdMatchExpr(pattern: string): string {
   if (pattern.endsWith('*')) {
     const prefix = pattern.slice(0, -1);
     return `$["\${CALLERID(num):0:${prefix.length}}"="${prefix}"]`;
@@ -346,7 +461,7 @@ function callerIdMatchExpr(pattern: string): string {
   return `$["\${CALLERID(num)}"="${pattern}"]`;
 }
 
-function optionGoto(opt: IvrOption): string[] | null {
+function optionGoto(opt: IvrOption, menu: IvrMenu): string[] | null {
   if (opt.action === 'goto_extension' && opt.target) return [`Goto(internal,${opt.target},1)`];
   if (opt.action === 'goto_ringgroup' && opt.target) return [`Goto(ringgroups,${opt.target},1)`];
   if (opt.action === 'goto_ivr' && opt.target) return [`Goto(ivr-${opt.target},s,1)`];
@@ -356,6 +471,27 @@ function optionGoto(opt: IvrOption): string[] | null {
       `System(/usr/local/bin/sms-send.sh \${CALLERID(num)} ${opt.target})`,
       'Playback(custom/sms-sent)',
     ];
+  }
+  if (opt.action === 'play_guidance' && opt.target) {
+    // ガイダンスを再生し、メニューに戻る (既定) か切断する。
+    return [`Playback(${opt.target})`, opt.nextAction === 'hangup' ? 'Hangup()' : 'Goto(menu,1)'];
+  }
+  if (opt.action === 'record_message') {
+    // 発信者の声を録音し、h extension (同 context) で notify-event.sh を発火する。
+    const maxSec = opt.recordMaxSeconds && opt.recordMaxSeconds > 0 ? opt.recordMaxSeconds : 60;
+    const cmds = [
+      'Set(EVENT_KIND=ivr_recorded_message)',
+      `Set(EVENT_EXT=${menu.number})`,
+      `Set(RECORD_FILE=\${RECORDINGS_DIR}/\${UNIQUEID}-ivr${menu.number}-\${CALLERID(num)}.wav)`,
+      'Answer()',
+      'Wait(1)',
+    ];
+    if (opt.recordIntroPath) cmds.push(`Playback(${opt.recordIntroPath})`);
+    cmds.push('Playback(beep)');
+    cmds.push(`Record(\${RECORD_FILE},3,${maxSec},k)`);
+    if (menu.goodbyePrompt) cmds.push(`Playback(${menu.goodbyePrompt})`);
+    cmds.push('Hangup()');
+    return cmds;
   }
   return null;
 }
@@ -433,7 +569,24 @@ export function renderIvrDialplan(menus: IvrMenu[] = listIvrMenus()): string {
     for (const o of m.options) {
       lines.push(`; ${o.label ?? ''}`);
       lines.push(`exten => ${o.digit},1,NoOp(IVR ${m.number} option ${o.digit})`);
-      const cmds = optionGoto(o);
+      if (o.action === 'business_hours_branch') {
+        // グローバル営業時間判定 ([businesshours]) を参照し、内/外で分岐する。
+        // メニューレベル after_hours と同じ仕組み (GotoIfTime ではなく BUSINESS_HOURS 変数)。
+        const openGoto = afterHoursTargetGoto(o.openAction ?? 'hangup', o.openTarget ?? null);
+        const closedGoto = afterHoursTargetGoto(o.closedAction ?? 'hangup', o.closedTarget ?? null);
+        lines.push(' same => n,Gosub(businesshours,s,1)');
+        lines.push(' same => n,GotoIf($["${BUSINESS_HOURS}"="closed"]?bh-closed)');
+        if (openGoto) lines.push(` same => n,${openGoto}`);
+        else if (m.goodbyePrompt) lines.push(` same => n,Playback(${m.goodbyePrompt})`);
+        lines.push(' same => n,Hangup()');
+        lines.push(' same => n(bh-closed),NoOp(after hours)');
+        if (closedGoto) lines.push(` same => n,${closedGoto}`);
+        else if (m.goodbyePrompt) lines.push(` same => n,Playback(${m.goodbyePrompt})`);
+        lines.push(' same => n,Hangup()');
+        lines.push('');
+        continue;
+      }
+      const cmds = optionGoto(o, m);
       if (cmds) {
         for (const cmd of cmds) {
           lines.push(` same => n,${cmd}`);
@@ -444,6 +597,20 @@ export function renderIvrDialplan(menus: IvrMenu[] = listIvrMenus()): string {
       }
       lines.push('');
     }
+
+    // record_message を持つメニューだけ、この context 専用の h extension を出す。
+    // 静的 [internal] の h は [ivr-N] の hangup では走らないため。EVENT_KIND が
+    // 空のとき (通常メニュー切断) は何もしないので過剰発火しない。
+    if (m.options.some((o) => o.action === 'record_message')) {
+      lines.push(`exten => h,1,NoOp(IVR ${m.number} hangup \${EVENT_KIND})`);
+      lines.push(' same => n,GotoIf($["${EVENT_KIND}" = ""]?nokind)');
+      lines.push(
+        ' same => n,System(/usr/local/bin/notify-event.sh "${EVENT_KIND}" "${EVENT_EXT}" "${CALLERID(num)}" "${CALLERID(name)}" "${UNIQUEID}" "${RECORD_FILE}")',
+      );
+      lines.push(' same => n(nokind),Return()');
+      lines.push('');
+    }
+
     const invalidPrompt = m.invalidPrompt ?? null;
     if (invalidPrompt) {
       lines.push(`exten => t,1,Playback(${invalidPrompt})`);

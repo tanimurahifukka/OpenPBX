@@ -5,7 +5,7 @@
 export const SCHEMA_ID_V1 = 'command-room-pbx/event/v1' as const;
 export const SCHEMA_ID_LEGACY = 'command-room-pbx/v1' as const;
 
-export type EventKind = 'same_day_reservation' | 'callback_request' | 'no_recording' | 'internal_call' | 'voicemail' | 'missed_call';
+export type EventKind = 'same_day_reservation' | 'callback_request' | 'no_recording' | 'internal_call' | 'voicemail' | 'missed_call' | 'ivr_recorded_message';
 export type CallDirection = 'inbound' | 'outbound' | 'internal';
 
 const KIND_VALUES: readonly EventKind[] = [
@@ -15,6 +15,7 @@ const KIND_VALUES: readonly EventKind[] = [
   'internal_call',
   'voicemail',
   'missed_call',
+  'ivr_recorded_message',
 ];
 const DIRECTION_VALUES: readonly CallDirection[] = ['inbound', 'outbound', 'internal'];
 

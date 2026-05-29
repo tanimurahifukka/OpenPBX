@@ -1,3 +1,4 @@
+import type Database from 'better-sqlite3';
 import { getDb } from './db';
 
 export interface PasswordPolicy {
@@ -20,8 +21,8 @@ interface Row {
   lockout_threshold: number;
 }
 
-export function getPolicy(): PasswordPolicy {
-  const r = getDb()
+export function getPolicy(db: Database.Database = getDb()): PasswordPolicy {
+  const r = db
     .prepare(
       `SELECT min_length, require_lowercase, require_uppercase, require_digit, require_symbol,
               rotation_days, lockout_threshold
@@ -50,8 +51,8 @@ export function getPolicy(): PasswordPolicy {
   };
 }
 
-export function updatePolicy(p: PasswordPolicy): void {
-  getDb()
+export function updatePolicy(p: PasswordPolicy, db: Database.Database = getDb()): void {
+  db
     .prepare(
       `UPDATE password_policies
           SET min_length = ?, require_lowercase = ?, require_uppercase = ?,
@@ -70,8 +71,8 @@ export function updatePolicy(p: PasswordPolicy): void {
     );
 }
 
-export function validatePassword(plain: string): string[] {
-  const p = getPolicy();
+export function validatePassword(plain: string, db: Database.Database = getDb()): string[] {
+  const p = getPolicy(db);
   const errs: string[] = [];
   if (plain.length < p.minLength) errs.push(`${p.minLength} 文字以上`);
   if (p.requireLowercase && !/[a-z]/.test(plain)) errs.push('小文字を含む');
@@ -88,9 +89,9 @@ export interface IpAllow {
   updatedAt: string;
 }
 
-export function listIpAllow(): IpAllow[] {
+export function listIpAllow(db: Database.Database = getDb()): IpAllow[] {
   return (
-    getDb()
+    db
       .prepare('SELECT cidr, note, updated_at FROM ip_allow_list ORDER BY cidr')
       .all() as Array<{ cidr: string; note: string | null; updated_at: string }>
   ).map((r) => ({ cidr: r.cidr, note: r.note, updatedAt: r.updated_at }));
@@ -98,9 +99,9 @@ export function listIpAllow(): IpAllow[] {
 
 const CIDR_RE = /^([0-9]{1,3}\.){3}[0-9]{1,3}\/(\d|[12]\d|3[0-2])$/;
 
-export function upsertIpAllow(cidr: string, note?: string): void {
+export function upsertIpAllow(cidr: string, note?: string, db: Database.Database = getDb()): void {
   if (!CIDR_RE.test(cidr)) throw new Error('CIDR 形式が不正');
-  getDb()
+  db
     .prepare(
       `INSERT INTO ip_allow_list (cidr, note, updated_at) VALUES (?, ?, datetime('now'))
        ON CONFLICT(cidr) DO UPDATE SET note = excluded.note, updated_at = datetime('now')`,
@@ -113,8 +114,8 @@ export function deleteIpAllow(cidr: string): boolean {
 }
 
 // IP が allow list に含まれるかチェック (空なら全許可)
-export function isIpAllowed(ip: string | undefined | null): boolean {
-  const list = listIpAllow();
+export function isIpAllowed(ip: string | undefined | null, db: Database.Database = getDb()): boolean {
+  const list = listIpAllow(db);
   if (list.length === 0) return true;
   if (!ip) return false;
   for (const item of list) {
@@ -123,7 +124,7 @@ export function isIpAllowed(ip: string | undefined | null): boolean {
   return false;
 }
 
-function cidrMatch(ip: string, cidr: string): boolean {
+export function cidrMatch(ip: string, cidr: string): boolean {
   const [base, bits] = cidr.split('/');
   const mask = (~0 << (32 - Number(bits))) >>> 0;
   const a = toUInt(ip);

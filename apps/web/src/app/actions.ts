@@ -27,6 +27,8 @@ import {
 } from '@/lib/auth';
 import { isIpAllowed } from '@/lib/policy';
 import { generateSecret, verifyTotp } from '@/lib/totp';
+import { addToBlacklist, deleteBlacklistEntry, writeBlacklistDialplanAndReload } from '@/lib/blacklist';
+import { retrieveParkedCall } from '@/lib/parking';
 import {
   createExtension,
   updateExtension,
@@ -131,6 +133,10 @@ export async function createExtensionAction(formData: FormData): Promise<void> {
       secret: s(formData.get('secret')),
       note: s(formData.get('note')) || undefined,
       webrtc: formData.get('webrtc') === 'on',
+      cfwdUnconditional: s(formData.get('cfwdUnconditional')) || null,
+      cfwdBusy: s(formData.get('cfwdBusy')) || null,
+      cfwdNoanswer: s(formData.get('cfwdNoanswer')) || null,
+      dnd: formData.get('dnd') === 'on',
     });
     await writePjsipConfigAndReload();
     recordAudit({ actor: me.username, action: 'extension.create', target: s(formData.get('number')) });
@@ -146,6 +152,10 @@ export async function updateExtensionAction(formData: FormData): Promise<void> {
       secret: s(formData.get('secret')),
       note: s(formData.get('note')) || undefined,
       webrtc: formData.get('webrtc') === 'on',
+      cfwdUnconditional: s(formData.get('cfwdUnconditional')) || null,
+      cfwdBusy: s(formData.get('cfwdBusy')) || null,
+      cfwdNoanswer: s(formData.get('cfwdNoanswer')) || null,
+      dnd: formData.get('dnd') === 'on',
     });
     await writePjsipConfigAndReload();
     recordAudit({ actor: me.username, action: 'extension.update', target: s(formData.get('number')) });
@@ -160,6 +170,53 @@ export async function deleteExtensionAction(formData: FormData): Promise<void> {
     deleteExtension(number);
     await writePjsipConfigAndReload();
     recordAudit({ actor: me.username, action: 'extension.delete', target: number });
+  });
+}
+
+// ---- blacklist (着信拒否) ----
+export async function addBlacklistAction(formData: FormData): Promise<void> {
+  await flash('/blacklist', '着信拒否に追加しました', async () => {
+    const me = await requireRole('admin', 'supervisor');
+    const number = s(formData.get('number'));
+    if (!number) throw new Error('番号が指定されていません');
+    addToBlacklist({ number, reason: s(formData.get('reason')) || null });
+    await writeBlacklistDialplanAndReload();
+    recordAudit({ actor: me.username, action: 'blacklist.add', target: number });
+  });
+}
+
+export async function deleteBlacklistAction(formData: FormData): Promise<void> {
+  await flash('/blacklist', '着信拒否から削除しました', async () => {
+    const me = await requireRole('admin', 'supervisor');
+    const number = s(formData.get('number'));
+    if (!number) throw new Error('番号が指定されていません');
+    deleteBlacklistEntry(number);
+    await writeBlacklistDialplanAndReload();
+    recordAudit({ actor: me.username, action: 'blacklist.delete', target: number });
+  });
+}
+
+// ---- parking (駐車通話の取り出し) ----
+export async function retrieveParkedCallAction(formData: FormData): Promise<void> {
+  await flash('/parking', '通話を取り出しています', async () => {
+    const me = await requireAccount();
+    const slot = s(formData.get('slot'));
+    const toExtension = s(formData.get('toExtension'));
+    if (!slot || !toExtension) throw new Error('スロットと取り出し先内線を指定してください');
+    await retrieveParkedCall(slot, toExtension);
+    recordAudit({ actor: me.username, action: 'parking.retrieve', target: `${slot}->${toExtension}` });
+  });
+}
+
+// 通話履歴 (/cdr) の行から発信元番号をワンタップでブロックする。履歴ページに留まる。
+export async function blockFromCdrAction(formData: FormData): Promise<void> {
+  await flash('/cdr', '着信拒否に追加しました', async () => {
+    const me = await requireRole('admin', 'supervisor');
+    const number = s(formData.get('number'));
+    if (!number) throw new Error('番号が指定されていません');
+    addToBlacklist({ number, reason: '通話履歴からブロック' });
+    await writeBlacklistDialplanAndReload();
+    recordAudit({ actor: me.username, action: 'blacklist.add', target: number });
   });
 }
 

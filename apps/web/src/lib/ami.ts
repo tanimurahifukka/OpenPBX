@@ -74,6 +74,12 @@ class AmiClient extends EventEmitter {
   private connected = false;
   private loggedIn = false;
   private devices = new Map<string, DeviceInfo>();
+  // Live call channels keyed by Uniqueid (Newchannel..Hangup) and the set of
+  // Uniqueids with an open MixMonitor recording. Used by the Safety Kernel.
+  private channels = new Map<string, ChannelInfo>();
+  private recordings = new Set<string>();
+  // Currently parked calls keyed by parking space (e.g. "701").
+  private parked = new Map<string, ParkedCall>();
   private destroyed = false;
 
   start(): void {
@@ -89,6 +95,16 @@ class AmiClient extends EventEmitter {
 
   isConnected(): boolean {
     return this.connected && this.loggedIn;
+  }
+
+  channelSummary(): ChannelActivitySummary {
+    return summarizeChannels(this.channels.values(), this.recordings);
+  }
+
+  getParkedCalls(): ParkedCall[] {
+    return Array.from(this.parked.values()).sort((a, b) =>
+      a.parkingSpace.localeCompare(b.parkingSpace),
+    );
   }
 
   private connect(): void {
@@ -110,6 +126,11 @@ class AmiClient extends EventEmitter {
       this.connected = false;
       this.loggedIn = false;
       this.socket = null;
+      // Channel/recording/parking state is only valid while connected. Drop it
+      // on disconnect so we never report a stale "call active" / parked call.
+      this.channels.clear();
+      this.recordings.clear();
+      this.parked.clear();
       if (this.destroyed) return;
       const delay = Math.min(30_000, 1000 * Math.pow(2, this.retries++));
       console.log(`[ami] reconnecting in ${delay}ms`);
@@ -154,24 +175,29 @@ class AmiClient extends EventEmitter {
   }
 
   private handleBlock(block: string): void {
-    const fields: Record<string, string> = {};
-    for (const line of block.split('\r\n')) {
-      const idx = line.indexOf(':');
-      if (idx < 0) continue;
-      const key = line.slice(0, idx).trim();
-      const value = line.slice(idx + 1).trim();
-      fields[key] = value;
-    }
+    const fields = parseAmiBlock(block);
     if (fields.Response === 'Success' && fields.Message?.includes('Authentication accepted')) {
       this.loggedIn = true;
       console.log('[ami] authenticated');
       // 初期 sync: 既存 endpoint と device state を取得
       this.send({ Action: 'DeviceStateList' });
       this.send({ Action: 'PJSIPShowEndpoints' });
+      // Seed live channels after a Web restart mid-call (CoreShowChannel
+      // events follow). Active MixMonitor recordings cannot be re-listed, so
+      // recordingActive may briefly under-count until the next start/stop.
+      this.send({ Action: 'CoreShowChannels' });
+      // Seed currently parked calls (ParkedCall events + ParkedCallsComplete).
+      this.send({ Action: 'ParkedCalls' });
       return;
     }
     const event = fields.Event;
     if (!event) return;
+
+    // Track live channels + recordings for the Safety Kernel. No-op for any
+    // event that is not a channel/recording lifecycle event.
+    applyChannelEvent(this.channels, this.recordings, fields);
+    // Track parked calls; emit so the parking SSE updates promptly.
+    if (applyParkingEvent(this.parked, fields)) this.emit('change', null);
 
     if (event === 'DeviceStateChange' || event === 'DeviceStateChanged' || event === 'DeviceStateList') {
       const device = fields.Device;
@@ -292,4 +318,169 @@ export function summarizeActiveCalls(devices: DeviceInfo[]): ActiveCallSummary {
 /** Live summary from the shared AMI client's tracked device map. */
 export function activeCallSummary(): ActiveCallSummary {
   return summarizeActiveCalls(listDevices());
+}
+
+// ---- Channel / recording tracking (ADR 0018 §D) ----
+//
+// Device state (above) only sees PJSIP endpoints. Channels additionally cover
+// trunk / IVR / Local legs that have no device state, so the channel count is
+// the more complete "is a call in progress" signal for the restart guard.
+
+export interface ChannelInfo {
+  uniqueid: string;
+  channel: string; // e.g. "PJSIP/1001-00000001"
+  state: string; // ChannelStateDesc, e.g. "Up" / "Ring" / "Ringing"
+}
+
+export interface ChannelActivitySummary {
+  /** Number of live channel legs (Newchannel without a matching Hangup). */
+  activeChannels: number;
+  /** True if any channel leg is currently up. */
+  anyActiveCall: boolean;
+  /** True if any MixMonitor recording is currently open. */
+  recordingActive: boolean;
+  /** Number of open MixMonitor recordings. */
+  recordingCount: number;
+}
+
+/**
+ * Parse one AMI block ("Key: Value" lines separated by \r\n) into a flat
+ * record. Lines without a colon are ignored. Pure / testable.
+ */
+export function parseAmiBlock(block: string): Record<string, string> {
+  const fields: Record<string, string> = {};
+  for (const line of block.split('\r\n')) {
+    const idx = line.indexOf(':');
+    if (idx < 0) continue;
+    const key = line.slice(0, idx).trim();
+    const value = line.slice(idx + 1).trim();
+    fields[key] = value;
+  }
+  return fields;
+}
+
+/**
+ * Apply a single AMI event to the channel / recording maps. No-op for events
+ * that are not channel- or recording-lifecycle related. Pure mutation of the
+ * passed-in collections so it can be unit-tested without a live socket.
+ */
+export function applyChannelEvent(
+  channels: Map<string, ChannelInfo>,
+  recordings: Set<string>,
+  fields: Record<string, string>,
+): void {
+  const event = fields.Event;
+  const uniqueid = fields.Uniqueid;
+  if (!event || !uniqueid) return;
+  switch (event) {
+    case 'Newchannel':
+    case 'CoreShowChannel':
+      channels.set(uniqueid, {
+        uniqueid,
+        channel: fields.Channel ?? '',
+        state: fields.ChannelStateDesc ?? '',
+      });
+      return;
+    case 'Newstate': {
+      const cur = channels.get(uniqueid);
+      if (cur) cur.state = fields.ChannelStateDesc ?? cur.state;
+      else
+        channels.set(uniqueid, {
+          uniqueid,
+          channel: fields.Channel ?? '',
+          state: fields.ChannelStateDesc ?? '',
+        });
+      return;
+    }
+    case 'Hangup':
+      channels.delete(uniqueid);
+      // Defensive: clear any recording too in case MixMonitorStop was missed,
+      // so a dropped stop event can't leak a permanent "recording active".
+      recordings.delete(uniqueid);
+      return;
+    case 'MixMonitorStart':
+      recordings.add(uniqueid);
+      return;
+    case 'MixMonitorStop':
+      recordings.delete(uniqueid);
+      return;
+    default:
+      return;
+  }
+}
+
+/** Pure summarizer — testable without a live AMI connection. */
+export function summarizeChannels(
+  channels: Iterable<ChannelInfo>,
+  recordings: ReadonlySet<string>,
+): ChannelActivitySummary {
+  let activeChannels = 0;
+  for (const _c of channels) activeChannels++;
+  const recordingCount = recordings.size;
+  return {
+    activeChannels,
+    anyActiveCall: activeChannels > 0,
+    recordingActive: recordingCount > 0,
+    recordingCount,
+  };
+}
+
+/** Live channel/recording summary from the shared AMI client. */
+export function channelActivitySummary(): ChannelActivitySummary {
+  return getClient().channelSummary();
+}
+
+// ---- Parked calls (#7 で park、701-720 で取り出し) ----
+
+export interface ParkedCall {
+  parkingSpace: string; // "701" 等。ここにダイヤルすると取り出せる
+  channel: string; // 駐車中チャネル
+  callerIdNum: string;
+  callerIdName: string;
+  timeoutSeconds: number | null; // 駐車の制限時間 (res_parking.conf parkingtime)
+  durationSeconds: number; // 駐車してからの経過秒 (スナップショット時点)
+}
+
+/** Parse one AMI ParkedCall event into a ParkedCall. Pure / testable. */
+export function parseParkedCallEvent(fields: Record<string, string>): ParkedCall | null {
+  const space = fields.ParkingSpace;
+  if (!space) return null;
+  return {
+    parkingSpace: space,
+    channel: fields.ParkeeChannel ?? '',
+    callerIdNum: fields.ParkeeCallerIDNum ?? '',
+    callerIdName: fields.ParkeeCallerIDName ?? '',
+    timeoutSeconds: fields.ParkingTimeout ? Number(fields.ParkingTimeout) || null : null,
+    durationSeconds: Number(fields.ParkingDuration) || 0,
+  };
+}
+
+const PARKING_REMOVE_EVENTS = new Set(['UnParkedCall', 'ParkedCallGiveUp', 'ParkedCallTimeOut']);
+
+/**
+ * Apply a parking AMI event to the parked map. Returns true if it handled a
+ * parking event (so the caller can emit a change). Pure mutation.
+ */
+export function applyParkingEvent(
+  parked: Map<string, ParkedCall>,
+  fields: Record<string, string>,
+): boolean {
+  const event = fields.Event;
+  const space = fields.ParkingSpace;
+  if (!event || !space) return false;
+  if (event === 'ParkedCall') {
+    const pc = parseParkedCallEvent(fields);
+    if (pc) parked.set(space, pc);
+    return true;
+  }
+  if (PARKING_REMOVE_EVENTS.has(event)) {
+    parked.delete(space);
+    return true;
+  }
+  return false;
+}
+
+/** Live parked-call list from the shared AMI client. */
+export function listParkedCalls(): ParkedCall[] {
+  return getClient().getParkedCalls();
 }

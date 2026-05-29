@@ -3,7 +3,9 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import { getDb } from './db';
 import { pickupGroupsOf } from './pickupGroups';
-import { getNetworkSettings } from './network';
+import { getNetworkSettings, type NetworkSettings } from './network';
+import { writeDialplanFile } from './dialplan';
+import { renderMohSetLine } from './moh';
 
 export interface Extension {
   number: string;
@@ -11,12 +13,19 @@ export interface Extension {
   secret: string;
   note: string | null;
   webrtc: boolean;
+  cfwdUnconditional: string | null;
+  cfwdBusy: string | null;
+  cfwdNoanswer: string | null;
+  dnd: boolean;
   updatedAt: string;
 }
 
 export class InvalidExtensionError extends Error {}
 
 const NUMBER_RE = /^[0-9]{2,6}$/; // 内線番号: 2〜6桁の数字
+// 転送先: 内線 (1001) と外線 (09012345678 / +8190...) の両方を許可。
+// 外線は [internal] のトランク outbound prefix ルートが処理する。
+const FWD_TARGET_RE = /^[0-9+]{2,15}$/;
 const PJSIP_OUT_DIR = process.env.PJSIP_OUT_DIR ?? '/asterisk/pjsip.d';
 const DIALPLAN_OUT_DIR = process.env.DIALPLAN_OUT_DIR ?? '/asterisk/dialplan.d';
 const ASTERISK_SIGNAL_DIR = process.env.ASTERISK_SIGNAL_DIR ?? '/asterisk/signals';
@@ -28,6 +37,10 @@ interface ExtensionRow {
   note: string | null;
   updated_at: string;
   webrtc?: number;
+  cfwd_unconditional?: string | null;
+  cfwd_busy?: string | null;
+  cfwd_noanswer?: string | null;
+  dnd?: number;
 }
 
 function rowToExtension(r: ExtensionRow): Extension {
@@ -37,20 +50,27 @@ function rowToExtension(r: ExtensionRow): Extension {
     secret: r.secret,
     note: r.note,
     webrtc: !!r.webrtc,
+    cfwdUnconditional: r.cfwd_unconditional ?? null,
+    cfwdBusy: r.cfwd_busy ?? null,
+    cfwdNoanswer: r.cfwd_noanswer ?? null,
+    dnd: !!r.dnd,
     updatedAt: r.updated_at,
   };
 }
 
+const SELECT_COLS =
+  'number, display_name, secret, note, webrtc, cfwd_unconditional, cfwd_busy, cfwd_noanswer, dnd, updated_at';
+
 export function listExtensions(db: Database.Database = getDb()): Extension[] {
   const rows = db
-    .prepare('SELECT number, display_name, secret, note, webrtc, updated_at FROM extensions ORDER BY number')
+    .prepare(`SELECT ${SELECT_COLS} FROM extensions ORDER BY number`)
     .all() as ExtensionRow[];
   return rows.map(rowToExtension);
 }
 
 export function getExtension(number: string, db: Database.Database = getDb()): Extension | null {
   const row = db
-    .prepare('SELECT number, display_name, secret, note, webrtc, updated_at FROM extensions WHERE number = ?')
+    .prepare(`SELECT ${SELECT_COLS} FROM extensions WHERE number = ?`)
     .get(number) as ExtensionRow | undefined;
   return row ? rowToExtension(row) : null;
 }
@@ -61,6 +81,16 @@ export interface UpsertExtensionInput {
   secret: string;
   note?: string;
   webrtc?: boolean;
+  cfwdUnconditional?: string | null;
+  cfwdBusy?: string | null;
+  cfwdNoanswer?: string | null;
+  dnd?: boolean;
+}
+
+function validateFwd(label: string, v: string | null | undefined): void {
+  if (v && !FWD_TARGET_RE.test(v)) {
+    throw new InvalidExtensionError(`${label} は内線または外線番号 (数字 / +、2〜15 桁)`);
+  }
 }
 
 function validate(input: UpsertExtensionInput): void {
@@ -73,6 +103,9 @@ function validate(input: UpsertExtensionInput): void {
   if (/["\\\n\r]/.test(input.secret)) {
     throw new InvalidExtensionError('secret に " \\ 改行は使えません');
   }
+  validateFwd('無条件転送先', input.cfwdUnconditional);
+  validateFwd('話中転送先', input.cfwdBusy);
+  validateFwd('無応答転送先', input.cfwdNoanswer);
 }
 
 export function createExtension(input: UpsertExtensionInput, db: Database.Database = getDb()): Extension {
@@ -81,9 +114,20 @@ export function createExtension(input: UpsertExtensionInput, db: Database.Databa
     throw new InvalidExtensionError(`内線 ${input.number} は既に存在します`);
   }
   db.prepare(
-    `INSERT INTO extensions (number, display_name, secret, note, webrtc, updated_at)
-     VALUES (?, ?, ?, ?, ?, datetime('now'))`,
-  ).run(input.number, input.displayName ?? null, input.secret, input.note ?? null, input.webrtc ? 1 : 0);
+    `INSERT INTO extensions
+       (number, display_name, secret, note, webrtc, cfwd_unconditional, cfwd_busy, cfwd_noanswer, dnd, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+  ).run(
+    input.number,
+    input.displayName ?? null,
+    input.secret,
+    input.note ?? null,
+    input.webrtc ? 1 : 0,
+    input.cfwdUnconditional || null,
+    input.cfwdBusy || null,
+    input.cfwdNoanswer || null,
+    input.dnd ? 1 : 0,
+  );
   return getExtension(input.number, db)!;
 }
 
@@ -95,9 +139,21 @@ export function updateExtension(input: UpsertExtensionInput, db: Database.Databa
   }
   db.prepare(
     `UPDATE extensions
-        SET display_name = ?, secret = ?, note = ?, webrtc = ?, updated_at = datetime('now')
+        SET display_name = ?, secret = ?, note = ?, webrtc = ?,
+            cfwd_unconditional = ?, cfwd_busy = ?, cfwd_noanswer = ?, dnd = ?,
+            updated_at = datetime('now')
       WHERE number = ?`,
-  ).run(input.displayName ?? null, input.secret, input.note ?? null, input.webrtc ? 1 : 0, input.number);
+  ).run(
+    input.displayName ?? null,
+    input.secret,
+    input.note ?? null,
+    input.webrtc ? 1 : 0,
+    input.cfwdUnconditional || null,
+    input.cfwdBusy || null,
+    input.cfwdNoanswer || null,
+    input.dnd ? 1 : 0,
+    input.number,
+  );
   return getExtension(input.number, db)!;
 }
 
@@ -113,8 +169,7 @@ export function deleteExtension(number: string, db: Database.Database = getDb())
 // Docker Desktop 上ではスマホや Tailnet の CIDR を local_net に入れると
 // external_* の書き換えが止まりやすい。通常は external_* のみを設定し、
 // local_net は Asterisk から直接到達できるネットワークに限る。
-export function renderTransportConfig(): string {
-  const net = getNetworkSettings();
+export function renderTransportConfig(net: NetworkSettings = getNetworkSettings()): string {
   const lines: string[] = [];
   lines.push('; AUTO-GENERATED by Web (/network). 手で編集しないこと。');
   lines.push(`; updated_at: ${new Date().toISOString()}`);
@@ -214,8 +269,10 @@ export function renderTransportConfig(): string {
 }
 
 // Asterisk の pjsip.d/extensions.conf を再生成する。
-export async function renderPjsipConfig(): Promise<string> {
-  const rows = listExtensions();
+export async function renderPjsipConfig(
+  rows: Extension[] = listExtensions(),
+  pickupOf: (n: string) => string[] = pickupGroupsOf,
+): Promise<string> {
   const blocks: string[] = [
     '; AUTO-GENERATED by Web (/extensions). 手で編集しないこと。',
     `; updated_at: ${new Date().toISOString()}`,
@@ -223,7 +280,7 @@ export async function renderPjsipConfig(): Promise<string> {
   ];
   for (const e of rows) {
     const cidName = (e.displayName ?? `Ext ${e.number}`).replace(/"/g, '');
-    const pickupNames = pickupGroupsOf(e.number);
+    const pickupNames = pickupOf(e.number);
     const templateName = e.webrtc ? 'endpoint-webrtc' : 'endpoint-internal';
     blocks.push(`[${e.number}](${templateName})`);
     blocks.push(`auth=auth${e.number}`);
@@ -242,6 +299,68 @@ export async function renderPjsipConfig(): Promise<string> {
     blocks.push('');
   }
   return blocks.join('\n');
+}
+
+// 転送 / DND が設定された内線だけ、明示 exten を [internal] に生成する。
+// 明示エントリは静的 extensions.conf の _100X パターンより優先されるため、
+// 未設定の内線は従来どおり _100X が処理する (挙動不変)。
+// 転送先 (内線/外線) は Goto(internal,<target>,1) に統一し、外線はトランクの
+// outbound prefix ルートが処理する。
+export function renderExtensionRoutingDialplan(rows: Extension[] = listExtensions()): string {
+  const lines: string[] = [];
+  lines.push('; AUTO-GENERATED by Web (/extensions). 手で編集しないこと。');
+  lines.push(`; updated_at: ${new Date().toISOString()}`);
+  lines.push('; 転送 / DND 設定のある内線のみ明示 exten を生成 (_100X より優先)。');
+  lines.push('');
+  lines.push('[internal]');
+  const routed = rows.filter(
+    (e) => e.dnd || e.cfwdUnconditional || e.cfwdBusy || e.cfwdNoanswer,
+  );
+  if (routed.length === 0) {
+    lines.push('; (転送 / DND 設定の内線なし)');
+    lines.push('');
+    return lines.join('\n');
+  }
+  for (const e of routed) {
+    lines.push(`; --- ${e.number} ${e.displayName ?? ''} ---`);
+    lines.push(`exten => ${e.number},1,NoOp(routing ${e.number} dnd=${e.dnd ? 1 : 0})`);
+    if (e.dnd) {
+      lines.push(' same => n,Hangup(BUSY)');
+      lines.push('');
+      continue;
+    }
+    if (e.cfwdUnconditional) {
+      lines.push(` same => n,NoOp(unconditional forward to ${e.cfwdUnconditional})`);
+      lines.push(` same => n,Goto(internal,${e.cfwdUnconditional},1)`);
+      lines.push('');
+      continue;
+    }
+    // 通常着信: 録音 + イベント + MOH。話中/無応答で転送。
+    lines.push(' same => n,Set(EVENT_KIND=internal_call)');
+    lines.push(` same => n,Set(EVENT_EXT=${e.number})`);
+    lines.push(
+      ` same => n,Set(RECORD_FILE=\${RECORDINGS_DIR}/\${UNIQUEID}-\${CALLERID(num)}-to-${e.number}.wav)`,
+    );
+    lines.push(' same => n,MixMonitor(${RECORD_FILE})');
+    lines.push(` same => n,${renderMohSetLine()}`);
+    lines.push(` same => n,Dial(PJSIP/${e.number},30,tTkKm)`);
+    if (e.cfwdBusy) {
+      lines.push(' same => n,GotoIf($["${DIALSTATUS}"="BUSY"]?fwd-busy)');
+      lines.push(' same => n,GotoIf($["${DIALSTATUS}"="CHANUNAVAIL"]?fwd-busy)');
+    }
+    if (e.cfwdNoanswer) {
+      lines.push(' same => n,GotoIf($["${DIALSTATUS}"="NOANSWER"]?fwd-noanswer)');
+    }
+    lines.push(' same => n,Hangup()');
+    if (e.cfwdBusy) {
+      lines.push(` same => n(fwd-busy),Goto(internal,${e.cfwdBusy},1)`);
+    }
+    if (e.cfwdNoanswer) {
+      lines.push(` same => n(fwd-noanswer),Goto(internal,${e.cfwdNoanswer},1)`);
+    }
+    lines.push('');
+  }
+  return lines.join('\n');
 }
 
 export async function writePjsipConfigAndReload(): Promise<{ path: string; reloaded: boolean }> {
@@ -279,6 +398,9 @@ export async function writePjsipConfigAndReload(): Promise<{ path: string; reloa
       'utf-8',
     );
   }
+
+  // 内線の転送 / DND ルーティング dialplan を同時に再生成する。
+  await writeDialplanFile('extensions-routing.conf', renderExtensionRoutingDialplan());
 
   let reloaded = false;
   try {

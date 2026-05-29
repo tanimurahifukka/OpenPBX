@@ -4,12 +4,16 @@ import fs from 'node:fs';
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS extensions (
-  number        TEXT PRIMARY KEY,
-  display_name  TEXT,
-  secret        TEXT NOT NULL DEFAULT '',
-  note          TEXT,
-  webrtc        INTEGER NOT NULL DEFAULT 0,
-  updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
+  number             TEXT PRIMARY KEY,
+  display_name       TEXT,
+  secret             TEXT NOT NULL DEFAULT '',
+  note               TEXT,
+  webrtc             INTEGER NOT NULL DEFAULT 0,
+  cfwd_unconditional TEXT,                       -- 無条件転送先 (内線/外線番号)。NULL=無効
+  cfwd_busy          TEXT,                       -- 話中時の転送先。NULL=無効
+  cfwd_noanswer      TEXT,                       -- 無応答時の転送先。NULL=無効
+  dnd                INTEGER NOT NULL DEFAULT 0, -- 取り込み中 (Do Not Disturb)
+  updated_at         TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS cdr_records (
@@ -121,11 +125,18 @@ CREATE TABLE IF NOT EXISTS ivr_menus (
 );
 
 CREATE TABLE IF NOT EXISTS ivr_options (
-  ivr_menu_id  INTEGER NOT NULL REFERENCES ivr_menus(id) ON DELETE CASCADE,
-  digit        TEXT NOT NULL,
-  action       TEXT NOT NULL,
-  target       TEXT,
-  label        TEXT,
+  ivr_menu_id        INTEGER NOT NULL REFERENCES ivr_menus(id) ON DELETE CASCADE,
+  digit              TEXT NOT NULL,
+  action             TEXT NOT NULL,
+  target             TEXT,
+  label              TEXT,
+  next_action        TEXT,     -- play_guidance: 'return_menu' | 'hangup'
+  record_max_seconds INTEGER,  -- record_message: 録音最大秒 (既定 60)
+  record_intro_path  TEXT,     -- record_message: 録音前アナウンス custom/*
+  open_action        TEXT,     -- business_hours_branch: 営業時間内アクション
+  open_target        TEXT,
+  closed_action      TEXT,     -- business_hours_branch: 営業時間外アクション
+  closed_target      TEXT,
   PRIMARY KEY (ivr_menu_id, digit)
 );
 
@@ -275,6 +286,14 @@ CREATE TABLE IF NOT EXISTS missed_call_events (
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS blacklist (
+  number      TEXT PRIMARY KEY,          -- 着信を拒否する発信者番号。末尾 * で前方一致
+  reason      TEXT,
+  hits        INTEGER NOT NULL DEFAULT 0,
+  created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS voicemail_boxes (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   number      TEXT NOT NULL UNIQUE,
@@ -402,6 +421,30 @@ function migrateIvrMenus(db: Database.Database): void {
   if (!names.has('after_hours_target')) {
     db.exec(`ALTER TABLE ivr_menus ADD COLUMN after_hours_target TEXT`);
   }
+  // ivr_options への play_guidance / record_message 用列 (NULL で既存行は無影響)。
+  const optCols = db.prepare(`PRAGMA table_info(ivr_options)`).all() as Array<{ name: string }>;
+  const optNames = new Set(optCols.map((c) => c.name));
+  if (!optNames.has('next_action')) {
+    db.exec(`ALTER TABLE ivr_options ADD COLUMN next_action TEXT`);
+  }
+  if (!optNames.has('record_max_seconds')) {
+    db.exec(`ALTER TABLE ivr_options ADD COLUMN record_max_seconds INTEGER`);
+  }
+  if (!optNames.has('record_intro_path')) {
+    db.exec(`ALTER TABLE ivr_options ADD COLUMN record_intro_path TEXT`);
+  }
+  if (!optNames.has('open_action')) {
+    db.exec(`ALTER TABLE ivr_options ADD COLUMN open_action TEXT`);
+  }
+  if (!optNames.has('open_target')) {
+    db.exec(`ALTER TABLE ivr_options ADD COLUMN open_target TEXT`);
+  }
+  if (!optNames.has('closed_action')) {
+    db.exec(`ALTER TABLE ivr_options ADD COLUMN closed_action TEXT`);
+  }
+  if (!optNames.has('closed_target')) {
+    db.exec(`ALTER TABLE ivr_options ADD COLUMN closed_target TEXT`);
+  }
 }
 
 function migrateRingGroups(db: Database.Database): void {
@@ -429,6 +472,18 @@ function migrateExtensions(db: Database.Database): void {
   }
   if (!names.has('webrtc')) {
     db.exec(`ALTER TABLE extensions ADD COLUMN webrtc INTEGER NOT NULL DEFAULT 0`);
+  }
+  if (!names.has('cfwd_unconditional')) {
+    db.exec(`ALTER TABLE extensions ADD COLUMN cfwd_unconditional TEXT`);
+  }
+  if (!names.has('cfwd_busy')) {
+    db.exec(`ALTER TABLE extensions ADD COLUMN cfwd_busy TEXT`);
+  }
+  if (!names.has('cfwd_noanswer')) {
+    db.exec(`ALTER TABLE extensions ADD COLUMN cfwd_noanswer TEXT`);
+  }
+  if (!names.has('dnd')) {
+    db.exec(`ALTER TABLE extensions ADD COLUMN dnd INTEGER NOT NULL DEFAULT 0`);
   }
 }
 
@@ -484,6 +539,16 @@ export function getDb(): Database.Database {
       console.log('[db] CDR ingest loop started');
     } catch (e) {
       console.warn('[db] CDR ingest loop start failed', e);
+    }
+    try {
+      // 着信拒否 (blacklist) dialplan を起動時に書き出す。[blacklist-check] context が
+      // 常に存在しないと from-trunk の Gosub(blacklist-check,s,1) が失敗するため。
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { writeBlacklistDialplanAndReload } = require('./blacklist') as typeof import('./blacklist');
+      await writeBlacklistDialplanAndReload();
+      console.log('[db] blacklist dialplan initialized on startup');
+    } catch (e) {
+      console.warn('[db] blacklist dialplan initial sync failed', e);
     }
     try {
       // command-room-pbx/event/v1 への upgrade ループ。data/inbox/*.meta.json を tail し
