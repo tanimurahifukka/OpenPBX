@@ -9,7 +9,7 @@
 
 import { NextResponse } from 'next/server';
 import { timingSafeEqual } from 'node:crypto';
-import { amiIsReady, activeCallSummary } from '@/lib/ami';
+import { amiIsReady, activeCallSummary, channelActivitySummary } from '@/lib/ami';
 import { isWithinBusinessHours } from '@/lib/businessHours';
 
 export const runtime = 'nodejs';
@@ -35,14 +35,20 @@ export async function GET(req: Request) {
 
   const ready = amiIsReady();
   const calls = activeCallSummary();
+  const chan = channelActivitySummary();
 
   return NextResponse.json({
     amiReady: ready,
     activeDevices: calls.activeDevices,
-    anyActiveCall: calls.anyActiveCall,
-    // Recording-in-progress tracking (MixMonitor) is not wired yet — null
-    // means "unknown" so the agent treats it conservatively. (ADR 0018 §D TODO)
-    recordingActive: null,
+    // Live channel legs (covers trunk/IVR legs that have no device state).
+    activeChannels: chan.activeChannels,
+    // True if either device state or a live channel indicates a call —
+    // conservative so the restart guard never cuts an in-flight call.
+    anyActiveCall: calls.anyActiveCall || chan.anyActiveCall,
+    // MixMonitor recordings in progress. null only when AMI is not connected
+    // (state unknown → agent treats it conservatively); otherwise a real bool.
+    recordingActive: ready ? chan.recordingActive : null,
+    recordingCount: ready ? chan.recordingCount : null,
     withinBusinessHours: isWithinBusinessHours(),
     checkedAt: new Date().toISOString(),
   });
