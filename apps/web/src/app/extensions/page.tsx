@@ -58,9 +58,31 @@ interface ExtensionFormProps {
     secret: string;
     note: string | null;
     webrtc?: boolean;
+    cfwdUnconditional?: string | null;
+    cfwdBusy?: string | null;
+    cfwdNoanswer?: string | null;
+    dnd?: boolean;
   };
   submitLabel: string;
   deleteAction?: (formData: FormData) => Promise<void>;
+}
+
+function hasForwarding(initial?: ExtensionFormProps['initial']): boolean {
+  return !!(initial?.dnd || initial?.cfwdUnconditional || initial?.cfwdBusy || initial?.cfwdNoanswer);
+}
+
+function forwardingBadge(initial?: ExtensionFormProps['initial']) {
+  if (!initial) return null;
+  const tags: string[] = [];
+  if (initial.dnd) tags.push('DND');
+  if (initial.cfwdUnconditional) tags.push('無条件転送');
+  else if (initial.cfwdBusy || initial.cfwdNoanswer) tags.push('条件付き転送');
+  if (tags.length === 0) return null;
+  return (
+    <span className="ml-2 rounded bg-warning-light px-1.5 py-0.5 text-[11px] font-medium text-warning-dark">
+      ● {tags.join(' / ')}
+    </span>
+  );
 }
 
 function ExtensionForm({ action, initial, submitLabel, deleteAction }: ExtensionFormProps) {
@@ -114,6 +136,58 @@ function ExtensionForm({ action, initial, submitLabel, deleteAction }: Extension
         <input type="checkbox" name="webrtc" defaultChecked={initial?.webrtc ?? false} className="h-4 w-4" />
         WebRTC を有効化 (/softphone でブラウザ電話)
       </label>
+
+      <details className="rounded border border-slate-200 bg-slate-50 p-3 sm:col-span-5" open={hasForwarding(initial)}>
+        <summary className="cursor-pointer text-xs font-semibold text-slate-700">
+          転送・DND{forwardingBadge(initial)}
+        </summary>
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <label className="text-xs text-slate-600">
+            無条件転送先
+            <input
+              name="cfwdUnconditional"
+              defaultValue={initial?.cfwdUnconditional ?? ''}
+              inputMode="numeric"
+              pattern="[0-9+]{2,15}"
+              className="mt-1 w-full rounded border border-slate-300 px-2 py-1 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
+              placeholder="内線/外線。例: 1002"
+              aria-label="無条件転送先"
+            />
+          </label>
+          <label className="text-xs text-slate-600">
+            話中転送先
+            <input
+              name="cfwdBusy"
+              defaultValue={initial?.cfwdBusy ?? ''}
+              inputMode="numeric"
+              pattern="[0-9+]{2,15}"
+              className="mt-1 w-full rounded border border-slate-300 px-2 py-1 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
+              placeholder="任意"
+              aria-label="話中転送先"
+            />
+          </label>
+          <label className="text-xs text-slate-600">
+            無応答転送先
+            <input
+              name="cfwdNoanswer"
+              defaultValue={initial?.cfwdNoanswer ?? ''}
+              inputMode="numeric"
+              pattern="[0-9+]{2,15}"
+              className="mt-1 w-full rounded border border-slate-300 px-2 py-1 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
+              placeholder="任意"
+              aria-label="無応答転送先"
+            />
+          </label>
+        </div>
+        <label className="mt-3 flex items-center gap-2 text-xs text-slate-600">
+          <input type="checkbox" name="dnd" defaultChecked={initial?.dnd ?? false} className="h-4 w-4" />
+          DND (取り込み中 / 着信拒否) を有効化
+        </label>
+        <p className="mt-2 text-[11px] text-slate-500">
+          外線 (携帯など) への転送には outbound prefix を設定した SIP トランクが必要です。無条件転送が最優先、次に DND、その後に話中/無応答転送が判定されます。
+        </p>
+      </details>
+
       <div className="flex items-end gap-2">
         <button
           type="submit"

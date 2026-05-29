@@ -13,6 +13,10 @@ function ext(over: Partial<Extension> = {}): Extension {
     secret: 'sec1',
     note: null,
     webrtc: false,
+    cfwdUnconditional: null,
+    cfwdBusy: null,
+    cfwdNoanswer: null,
+    dnd: false,
     updatedAt: '',
     ...over,
   };

@@ -4,12 +4,16 @@ import fs from 'node:fs';
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS extensions (
-  number        TEXT PRIMARY KEY,
-  display_name  TEXT,
-  secret        TEXT NOT NULL DEFAULT '',
-  note          TEXT,
-  webrtc        INTEGER NOT NULL DEFAULT 0,
-  updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
+  number             TEXT PRIMARY KEY,
+  display_name       TEXT,
+  secret             TEXT NOT NULL DEFAULT '',
+  note               TEXT,
+  webrtc             INTEGER NOT NULL DEFAULT 0,
+  cfwd_unconditional TEXT,                       -- 無条件転送先 (内線/外線番号)。NULL=無効
+  cfwd_busy          TEXT,                       -- 話中時の転送先。NULL=無効
+  cfwd_noanswer      TEXT,                       -- 無応答時の転送先。NULL=無効
+  dnd                INTEGER NOT NULL DEFAULT 0, -- 取り込み中 (Do Not Disturb)
+  updated_at         TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS cdr_records (
@@ -429,6 +433,18 @@ function migrateExtensions(db: Database.Database): void {
   }
   if (!names.has('webrtc')) {
     db.exec(`ALTER TABLE extensions ADD COLUMN webrtc INTEGER NOT NULL DEFAULT 0`);
+  }
+  if (!names.has('cfwd_unconditional')) {
+    db.exec(`ALTER TABLE extensions ADD COLUMN cfwd_unconditional TEXT`);
+  }
+  if (!names.has('cfwd_busy')) {
+    db.exec(`ALTER TABLE extensions ADD COLUMN cfwd_busy TEXT`);
+  }
+  if (!names.has('cfwd_noanswer')) {
+    db.exec(`ALTER TABLE extensions ADD COLUMN cfwd_noanswer TEXT`);
+  }
+  if (!names.has('dnd')) {
+    db.exec(`ALTER TABLE extensions ADD COLUMN dnd INTEGER NOT NULL DEFAULT 0`);
   }
 }
 

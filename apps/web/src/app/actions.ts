@@ -131,6 +131,10 @@ export async function createExtensionAction(formData: FormData): Promise<void> {
       secret: s(formData.get('secret')),
       note: s(formData.get('note')) || undefined,
       webrtc: formData.get('webrtc') === 'on',
+      cfwdUnconditional: s(formData.get('cfwdUnconditional')) || null,
+      cfwdBusy: s(formData.get('cfwdBusy')) || null,
+      cfwdNoanswer: s(formData.get('cfwdNoanswer')) || null,
+      dnd: formData.get('dnd') === 'on',
     });
     await writePjsipConfigAndReload();
     recordAudit({ actor: me.username, action: 'extension.create', target: s(formData.get('number')) });
@@ -146,6 +150,10 @@ export async function updateExtensionAction(formData: FormData): Promise<void> {
       secret: s(formData.get('secret')),
       note: s(formData.get('note')) || undefined,
       webrtc: formData.get('webrtc') === 'on',
+      cfwdUnconditional: s(formData.get('cfwdUnconditional')) || null,
+      cfwdBusy: s(formData.get('cfwdBusy')) || null,
+      cfwdNoanswer: s(formData.get('cfwdNoanswer')) || null,
+      dnd: formData.get('dnd') === 'on',
     });
     await writePjsipConfigAndReload();
     recordAudit({ actor: me.username, action: 'extension.update', target: s(formData.get('number')) });
