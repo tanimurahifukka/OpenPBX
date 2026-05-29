@@ -233,9 +233,49 @@ function validate(i: UpsertIvrInput): void {
   }
 }
 
+// goto_ivr の参照を辿って循環 (A→A / A→B→A …) があるか検出する。
+// menus は候補以外の既存メニュー、candidate は新規/更新後のメニュー。
+// 候補から到達できる goto_ivr 経路に後退辺があれば true。
+export function detectIvrLoop(
+  menus: IvrMenu[],
+  candidate: { number: string; options: IvrOption[] },
+): boolean {
+  const edges = new Map<string, Set<string>>();
+  const addEdges = (from: string, opts: IvrOption[]) => {
+    const targets = new Set<string>();
+    for (const o of opts) {
+      if (o.action === 'goto_ivr' && o.target) targets.add(o.target);
+    }
+    edges.set(from, targets);
+  };
+  for (const m of menus) {
+    if (m.number === candidate.number) continue; // 候補が上書きする
+    addEdges(m.number, m.options);
+  }
+  addEdges(candidate.number, candidate.options);
+
+  const GRAY = 1;
+  const BLACK = 2;
+  const color = new Map<string, number>();
+  const dfs = (node: string): boolean => {
+    color.set(node, GRAY);
+    for (const next of edges.get(node) ?? []) {
+      const c = color.get(next);
+      if (c === GRAY) return true; // 後退辺 = 循環
+      if (c === undefined && dfs(next)) return true;
+    }
+    color.set(node, BLACK);
+    return false;
+  };
+  return dfs(candidate.number);
+}
+
 export function createIvrMenu(input: UpsertIvrInput, db: Database.Database = getDb()): IvrMenu {
   validate(input);
   if (getIvrMenu(input.number, db)) throw new InvalidIvrError(`IVR ${input.number} は既存`);
+  if (detectIvrLoop(listIvrMenus(db), { number: input.number, options: input.options })) {
+    throw new InvalidIvrError('goto_ivr が循環しています (例: A→B→A)。参照先を見直してください');
+  }
   const info = db
     .prepare(
       `INSERT INTO ivr_menus (number, name, welcome_prompt, menu_prompt, invalid_prompt, goodbye_prompt,
@@ -263,6 +303,9 @@ export function updateIvrMenu(input: UpsertIvrInput, db: Database.Database = get
   validate(input);
   const existing = getIvrMenu(input.number, db);
   if (!existing) throw new InvalidIvrError(`IVR ${input.number} は存在しません`);
+  if (detectIvrLoop(listIvrMenus(db), { number: input.number, options: input.options })) {
+    throw new InvalidIvrError('goto_ivr が循環しています (例: A→B→A)。参照先を見直してください');
+  }
   db.prepare(
     `UPDATE ivr_menus
         SET name = ?, welcome_prompt = ?, menu_prompt = ?, invalid_prompt = ?, goodbye_prompt = ?,
