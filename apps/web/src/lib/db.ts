@@ -133,6 +133,10 @@ CREATE TABLE IF NOT EXISTS ivr_options (
   next_action        TEXT,     -- play_guidance: 'return_menu' | 'hangup'
   record_max_seconds INTEGER,  -- record_message: 録音最大秒 (既定 60)
   record_intro_path  TEXT,     -- record_message: 録音前アナウンス custom/*
+  open_action        TEXT,     -- business_hours_branch: 営業時間内アクション
+  open_target        TEXT,
+  closed_action      TEXT,     -- business_hours_branch: 営業時間外アクション
+  closed_target      TEXT,
   PRIMARY KEY (ivr_menu_id, digit)
 );
 
@@ -428,6 +432,18 @@ function migrateIvrMenus(db: Database.Database): void {
   }
   if (!optNames.has('record_intro_path')) {
     db.exec(`ALTER TABLE ivr_options ADD COLUMN record_intro_path TEXT`);
+  }
+  if (!optNames.has('open_action')) {
+    db.exec(`ALTER TABLE ivr_options ADD COLUMN open_action TEXT`);
+  }
+  if (!optNames.has('open_target')) {
+    db.exec(`ALTER TABLE ivr_options ADD COLUMN open_target TEXT`);
+  }
+  if (!optNames.has('closed_action')) {
+    db.exec(`ALTER TABLE ivr_options ADD COLUMN closed_action TEXT`);
+  }
+  if (!optNames.has('closed_target')) {
+    db.exec(`ALTER TABLE ivr_options ADD COLUMN closed_target TEXT`);
   }
 }
 

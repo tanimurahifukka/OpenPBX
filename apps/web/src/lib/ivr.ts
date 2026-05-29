@@ -46,6 +46,7 @@ const IVR_ACTIONS: ReadonlyArray<IvrAction> = [
   'send_sms',
   'play_guidance',
   'record_message',
+  'business_hours_branch',
   'hangup',
 ];
 const NEXT_ACTIONS: ReadonlyArray<IvrNextAction> = ['return_menu', 'hangup'];
@@ -91,13 +92,17 @@ interface OptionRow {
   next_action: IvrNextAction | null;
   record_max_seconds: number | null;
   record_intro_path: string | null;
+  open_action: AfterHoursAction | null;
+  open_target: string | null;
+  closed_action: AfterHoursAction | null;
+  closed_target: string | null;
 }
 
 function loadOptions(menuId: number, db: Database.Database): IvrOption[] {
   return (
     db
       .prepare(
-        'SELECT digit, action, target, label, next_action, record_max_seconds, record_intro_path FROM ivr_options WHERE ivr_menu_id = ? ORDER BY rowid ASC',
+        'SELECT digit, action, target, label, next_action, record_max_seconds, record_intro_path, open_action, open_target, closed_action, closed_target FROM ivr_options WHERE ivr_menu_id = ? ORDER BY rowid ASC',
       )
       .all(menuId) as OptionRow[]
   ).map((r) => {
@@ -105,6 +110,10 @@ function loadOptions(menuId: number, db: Database.Database): IvrOption[] {
     if (r.next_action != null) o.nextAction = r.next_action;
     if (r.record_max_seconds != null) o.recordMaxSeconds = r.record_max_seconds;
     if (r.record_intro_path != null) o.recordIntroPath = r.record_intro_path;
+    if (r.open_action != null) o.openAction = r.open_action;
+    if (r.open_target != null) o.openTarget = r.open_target;
+    if (r.closed_action != null) o.closedAction = r.closed_action;
+    if (r.closed_target != null) o.closedTarget = r.closed_target;
     return o;
   });
 }
@@ -235,6 +244,21 @@ function validate(i: UpsertIvrInput): void {
       }
       if (o.recordIntroPath && !PROMPT_RE.test(o.recordIntroPath)) {
         throw new InvalidIvrError(`録音前アナウンスのパスが不正: ${o.recordIntroPath}`);
+      }
+    }
+    if (o.action === 'business_hours_branch') {
+      const branches: Array<[string, AfterHoursAction | null | undefined, string | null | undefined]> = [
+        ['営業時間内', o.openAction, o.openTarget],
+        ['営業時間外', o.closedAction, o.closedTarget],
+      ];
+      for (const [label, action, target] of branches) {
+        const act = action ?? 'hangup';
+        if (!AFTER_HOURS_ACTIONS.includes(act)) {
+          throw new InvalidIvrError(`${label}のアクションが不正: ${act}`);
+        }
+        if (act !== 'hangup' && (!target || !NUMBER_RE.test(target))) {
+          throw new InvalidIvrError(`${label}の転送先が不正: ${target}`);
+        }
       }
     }
   }
@@ -372,7 +396,7 @@ function replaceOptions(menuId: number, options: IvrOption[], db: Database.Datab
   const tx = db.transaction((opts: IvrOption[]) => {
     db.prepare('DELETE FROM ivr_options WHERE ivr_menu_id = ?').run(menuId);
     const ins = db.prepare(
-      'INSERT INTO ivr_options (ivr_menu_id, digit, action, target, label, next_action, record_max_seconds, record_intro_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO ivr_options (ivr_menu_id, digit, action, target, label, next_action, record_max_seconds, record_intro_path, open_action, open_target, closed_action, closed_target) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     );
     for (const o of opts) {
       ins.run(
@@ -384,6 +408,10 @@ function replaceOptions(menuId: number, options: IvrOption[], db: Database.Datab
         o.nextAction ?? null,
         o.recordMaxSeconds ?? null,
         o.recordIntroPath ?? null,
+        o.openAction ?? null,
+        o.openTarget ?? null,
+        o.closedAction ?? null,
+        o.closedTarget ?? null,
       );
     }
   });
@@ -541,6 +569,23 @@ export function renderIvrDialplan(menus: IvrMenu[] = listIvrMenus()): string {
     for (const o of m.options) {
       lines.push(`; ${o.label ?? ''}`);
       lines.push(`exten => ${o.digit},1,NoOp(IVR ${m.number} option ${o.digit})`);
+      if (o.action === 'business_hours_branch') {
+        // グローバル営業時間判定 ([businesshours]) を参照し、内/外で分岐する。
+        // メニューレベル after_hours と同じ仕組み (GotoIfTime ではなく BUSINESS_HOURS 変数)。
+        const openGoto = afterHoursTargetGoto(o.openAction ?? 'hangup', o.openTarget ?? null);
+        const closedGoto = afterHoursTargetGoto(o.closedAction ?? 'hangup', o.closedTarget ?? null);
+        lines.push(' same => n,Gosub(businesshours,s,1)');
+        lines.push(' same => n,GotoIf($["${BUSINESS_HOURS}"="closed"]?bh-closed)');
+        if (openGoto) lines.push(` same => n,${openGoto}`);
+        else if (m.goodbyePrompt) lines.push(` same => n,Playback(${m.goodbyePrompt})`);
+        lines.push(' same => n,Hangup()');
+        lines.push(' same => n(bh-closed),NoOp(after hours)');
+        if (closedGoto) lines.push(` same => n,${closedGoto}`);
+        else if (m.goodbyePrompt) lines.push(` same => n,Playback(${m.goodbyePrompt})`);
+        lines.push(' same => n,Hangup()');
+        lines.push('');
+        continue;
+      }
       const cmds = optionGoto(o, m);
       if (cmds) {
         for (const cmd of cmds) {

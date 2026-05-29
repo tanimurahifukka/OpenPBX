@@ -278,4 +278,28 @@ describe('renderIvrDialplan', () => {
     const withoutRecord = renderIvrDialplan([fixtureMenu()]);
     expect(withoutRecord).not.toContain('exten => h,1');
   });
+
+  it('business_hours_branch gosubs business hours and branches open/closed', () => {
+    const out = renderIvrDialplan([
+      fixtureMenu({
+        options: [
+          {
+            digit: '0',
+            action: 'business_hours_branch',
+            target: null,
+            label: null,
+            openAction: 'goto_extension',
+            openTarget: '1001',
+            closedAction: 'goto_voicemail',
+            closedTarget: '1001',
+          },
+        ],
+      }),
+    ]);
+    expect(out).toContain('Gosub(businesshours,s,1)');
+    expect(out).toContain('GotoIf($["${BUSINESS_HOURS}"="closed"]?bh-closed)');
+    expect(out).toContain('Goto(internal,1001,1)'); // 営業時間内
+    expect(out).toContain('same => n(bh-closed),NoOp(after hours)');
+    expect(out).toContain('Goto(voicemail-1001,s,1)'); // 営業時間外
+  });
 });

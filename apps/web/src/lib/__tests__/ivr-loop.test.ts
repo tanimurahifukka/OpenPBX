@@ -91,6 +91,52 @@ describe('createIvrMenu validates play_guidance / record_message', () => {
     ).toThrow(InvalidIvrError);
   });
 
+  it('rejects business_hours_branch with a transfer action but no target', () => {
+    expect(() =>
+      createIvrMenu(
+        {
+          number: '8014',
+          options: [
+            {
+              digit: '0',
+              action: 'business_hours_branch',
+              target: null,
+              label: null,
+              openAction: 'goto_extension',
+              openTarget: null,
+              closedAction: 'hangup',
+              closedTarget: null,
+            },
+          ],
+        },
+        db,
+      ),
+    ).toThrow(InvalidIvrError);
+  });
+
+  it('accepts business_hours_branch with a valid open transfer and closed hangup', () => {
+    expect(() =>
+      createIvrMenu(
+        {
+          number: '8015',
+          options: [
+            {
+              digit: '0',
+              action: 'business_hours_branch',
+              target: null,
+              label: null,
+              openAction: 'goto_extension',
+              openTarget: '1001',
+              closedAction: 'hangup',
+              closedTarget: null,
+            },
+          ],
+        },
+        db,
+      ),
+    ).not.toThrow();
+  });
+
   it('persists record_message fields through create + reload', () => {
     const m = createIvrMenu(
       {

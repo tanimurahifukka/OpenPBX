@@ -42,6 +42,22 @@ describe('IVR option extended fields (play_guidance / record_message)', () => {
     ];
     expect(parseIvrOptionLines(serializeIvrOptions(input))).toEqual(input);
   });
+
+  it('round-trips a business_hours_branch option (open/closed)', () => {
+    const input: IvrOption[] = [
+      {
+        digit: '0',
+        action: 'business_hours_branch',
+        target: null,
+        label: null,
+        openAction: 'goto_extension',
+        openTarget: '1001',
+        closedAction: 'goto_voicemail',
+        closedTarget: '9100',
+      },
+    ];
+    expect(parseIvrOptionLines(serializeIvrOptions(input))).toEqual(input);
+  });
 });
 
 describe('parseCallerIdRouteLines', () => {
