@@ -260,3 +260,36 @@ export function listDevices(): DeviceInfo[] {
 export function amiIsReady(): boolean {
   return getClient().isConnected();
 }
+
+// ---- Edge Fleet PBX Safety Kernel (ADR 0018 §D) ----
+//
+// Device states that indicate a device is busy on a call. RINGING (inbound,
+// not yet answered) is counted as activity too, so the restart guard errs
+// toward deferring rather than cutting a call that is about to connect.
+const ACTIVE_CALL_STATES: ReadonlySet<DeviceState> = new Set<DeviceState>([
+  'inuse',
+  'busy',
+  'ringinuse',
+  'onhold',
+  'ringing',
+]);
+
+export interface ActiveCallSummary {
+  /** Number of devices currently in an active-call state. */
+  activeDevices: number;
+  /** True if any device is on / ringing a call right now. */
+  anyActiveCall: boolean;
+}
+
+/** Pure summarizer — testable without a live AMI connection. */
+export function summarizeActiveCalls(devices: DeviceInfo[]): ActiveCallSummary {
+  const activeDevices = devices.filter((d) =>
+    ACTIVE_CALL_STATES.has(d.state),
+  ).length;
+  return { activeDevices, anyActiveCall: activeDevices > 0 };
+}
+
+/** Live summary from the shared AMI client's tracked device map. */
+export function activeCallSummary(): ActiveCallSummary {
+  return summarizeActiveCalls(listDevices());
+}
