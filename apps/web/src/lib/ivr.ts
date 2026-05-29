@@ -12,6 +12,7 @@ import {
   type CallerIdRouteAction,
   type IvrAction,
   type IvrMenu,
+  type IvrNextAction,
   type IvrOption,
   type UpsertCallerIdRoute,
 } from './ivr-format';
@@ -22,6 +23,7 @@ export type {
   CallerIdRouteAction,
   IvrAction,
   IvrMenu,
+  IvrNextAction,
   IvrOption,
   UpsertCallerIdRoute,
 };
@@ -42,8 +44,11 @@ const IVR_ACTIONS: ReadonlyArray<IvrAction> = [
   'goto_ringgroup',
   'goto_ivr',
   'send_sms',
+  'play_guidance',
+  'record_message',
   'hangup',
 ];
+const NEXT_ACTIONS: ReadonlyArray<IvrNextAction> = ['return_menu', 'hangup'];
 const AFTER_HOURS_ACTIONS: ReadonlyArray<AfterHoursAction> = [
   'goto_ivr',
   'goto_extension',
@@ -83,14 +88,25 @@ interface OptionRow {
   action: IvrAction;
   target: string | null;
   label: string | null;
+  next_action: IvrNextAction | null;
+  record_max_seconds: number | null;
+  record_intro_path: string | null;
 }
 
 function loadOptions(menuId: number, db: Database.Database): IvrOption[] {
   return (
     db
-      .prepare('SELECT digit, action, target, label FROM ivr_options WHERE ivr_menu_id = ? ORDER BY rowid ASC')
+      .prepare(
+        'SELECT digit, action, target, label, next_action, record_max_seconds, record_intro_path FROM ivr_options WHERE ivr_menu_id = ? ORDER BY rowid ASC',
+      )
       .all(menuId) as OptionRow[]
-  ).map((r) => ({ digit: r.digit, action: r.action, target: r.target, label: r.label }));
+  ).map((r) => {
+    const o: IvrOption = { digit: r.digit, action: r.action, target: r.target, label: r.label };
+    if (r.next_action != null) o.nextAction = r.next_action;
+    if (r.record_max_seconds != null) o.recordMaxSeconds = r.record_max_seconds;
+    if (r.record_intro_path != null) o.recordIntroPath = r.record_intro_path;
+    return o;
+  });
 }
 
 interface CallerIdRouteRow {
@@ -200,6 +216,25 @@ function validate(i: UpsertIvrInput): void {
         if (!NUMBER_RE.test(o.target)) {
           throw new InvalidIvrError(`target が不正: ${o.target}`);
         }
+      }
+    }
+    if (o.action === 'play_guidance') {
+      if (!o.target || !PROMPT_RE.test(o.target)) {
+        throw new InvalidIvrError(`ガイダンス再生のパスが不正: ${o.target}`);
+      }
+      if (o.nextAction != null && !NEXT_ACTIONS.includes(o.nextAction)) {
+        throw new InvalidIvrError(`ガイダンス後の動作が不正: ${o.nextAction}`);
+      }
+    }
+    if (o.action === 'record_message') {
+      if (
+        o.recordMaxSeconds != null &&
+        (!Number.isInteger(o.recordMaxSeconds) || o.recordMaxSeconds < 5 || o.recordMaxSeconds > 300)
+      ) {
+        throw new InvalidIvrError('録音秒数は 5〜300 の整数で指定してください');
+      }
+      if (o.recordIntroPath && !PROMPT_RE.test(o.recordIntroPath)) {
+        throw new InvalidIvrError(`録音前アナウンスのパスが不正: ${o.recordIntroPath}`);
       }
     }
   }
@@ -337,10 +372,19 @@ function replaceOptions(menuId: number, options: IvrOption[], db: Database.Datab
   const tx = db.transaction((opts: IvrOption[]) => {
     db.prepare('DELETE FROM ivr_options WHERE ivr_menu_id = ?').run(menuId);
     const ins = db.prepare(
-      'INSERT INTO ivr_options (ivr_menu_id, digit, action, target, label) VALUES (?, ?, ?, ?, ?)',
+      'INSERT INTO ivr_options (ivr_menu_id, digit, action, target, label, next_action, record_max_seconds, record_intro_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
     );
     for (const o of opts) {
-      ins.run(menuId, o.digit, o.action, o.target ?? null, o.label ?? null);
+      ins.run(
+        menuId,
+        o.digit,
+        o.action,
+        o.target ?? null,
+        o.label ?? null,
+        o.nextAction ?? null,
+        o.recordMaxSeconds ?? null,
+        o.recordIntroPath ?? null,
+      );
     }
   });
   tx(options);
@@ -389,7 +433,7 @@ export function callerIdMatchExpr(pattern: string): string {
   return `$["\${CALLERID(num)}"="${pattern}"]`;
 }
 
-function optionGoto(opt: IvrOption): string[] | null {
+function optionGoto(opt: IvrOption, menu: IvrMenu): string[] | null {
   if (opt.action === 'goto_extension' && opt.target) return [`Goto(internal,${opt.target},1)`];
   if (opt.action === 'goto_ringgroup' && opt.target) return [`Goto(ringgroups,${opt.target},1)`];
   if (opt.action === 'goto_ivr' && opt.target) return [`Goto(ivr-${opt.target},s,1)`];
@@ -399,6 +443,27 @@ function optionGoto(opt: IvrOption): string[] | null {
       `System(/usr/local/bin/sms-send.sh \${CALLERID(num)} ${opt.target})`,
       'Playback(custom/sms-sent)',
     ];
+  }
+  if (opt.action === 'play_guidance' && opt.target) {
+    // ガイダンスを再生し、メニューに戻る (既定) か切断する。
+    return [`Playback(${opt.target})`, opt.nextAction === 'hangup' ? 'Hangup()' : 'Goto(menu,1)'];
+  }
+  if (opt.action === 'record_message') {
+    // 発信者の声を録音し、h extension (同 context) で notify-event.sh を発火する。
+    const maxSec = opt.recordMaxSeconds && opt.recordMaxSeconds > 0 ? opt.recordMaxSeconds : 60;
+    const cmds = [
+      'Set(EVENT_KIND=ivr_recorded_message)',
+      `Set(EVENT_EXT=${menu.number})`,
+      `Set(RECORD_FILE=\${RECORDINGS_DIR}/\${UNIQUEID}-ivr${menu.number}-\${CALLERID(num)}.wav)`,
+      'Answer()',
+      'Wait(1)',
+    ];
+    if (opt.recordIntroPath) cmds.push(`Playback(${opt.recordIntroPath})`);
+    cmds.push('Playback(beep)');
+    cmds.push(`Record(\${RECORD_FILE},3,${maxSec},k)`);
+    if (menu.goodbyePrompt) cmds.push(`Playback(${menu.goodbyePrompt})`);
+    cmds.push('Hangup()');
+    return cmds;
   }
   return null;
 }
@@ -476,7 +541,7 @@ export function renderIvrDialplan(menus: IvrMenu[] = listIvrMenus()): string {
     for (const o of m.options) {
       lines.push(`; ${o.label ?? ''}`);
       lines.push(`exten => ${o.digit},1,NoOp(IVR ${m.number} option ${o.digit})`);
-      const cmds = optionGoto(o);
+      const cmds = optionGoto(o, m);
       if (cmds) {
         for (const cmd of cmds) {
           lines.push(` same => n,${cmd}`);
@@ -487,6 +552,20 @@ export function renderIvrDialplan(menus: IvrMenu[] = listIvrMenus()): string {
       }
       lines.push('');
     }
+
+    // record_message を持つメニューだけ、この context 専用の h extension を出す。
+    // 静的 [internal] の h は [ivr-N] の hangup では走らないため。EVENT_KIND が
+    // 空のとき (通常メニュー切断) は何もしないので過剰発火しない。
+    if (m.options.some((o) => o.action === 'record_message')) {
+      lines.push(`exten => h,1,NoOp(IVR ${m.number} hangup \${EVENT_KIND})`);
+      lines.push(' same => n,GotoIf($["${EVENT_KIND}" = ""]?nokind)');
+      lines.push(
+        ' same => n,System(/usr/local/bin/notify-event.sh "${EVENT_KIND}" "${EVENT_EXT}" "${CALLERID(num)}" "${CALLERID(name)}" "${UNIQUEID}" "${RECORD_FILE}")',
+      );
+      lines.push(' same => n(nokind),Return()');
+      lines.push('');
+    }
+
     const invalidPrompt = m.invalidPrompt ?? null;
     if (invalidPrompt) {
       lines.push(`exten => t,1,Playback(${invalidPrompt})`);

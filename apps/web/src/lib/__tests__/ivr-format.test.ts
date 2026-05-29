@@ -17,6 +17,33 @@ describe('IVR option send_sms round-trip', () => {
   });
 });
 
+describe('IVR option extended fields (play_guidance / record_message)', () => {
+  it('keeps the legacy 4-field wire format for options without extra fields', () => {
+    expect(serializeIvrOptions([{ digit: '1', action: 'hangup', target: null, label: null }])).toBe('1|hangup||');
+  });
+
+  it('round-trips a play_guidance option with nextAction', () => {
+    const input: IvrOption[] = [
+      { digit: '1', action: 'play_guidance', target: 'custom/info', label: null, nextAction: 'hangup' },
+    ];
+    expect(parseIvrOptionLines(serializeIvrOptions(input))).toEqual(input);
+  });
+
+  it('round-trips a record_message option with maxSeconds and intro', () => {
+    const input: IvrOption[] = [
+      {
+        digit: '2',
+        action: 'record_message',
+        target: null,
+        label: '伝言',
+        recordMaxSeconds: 45,
+        recordIntroPath: 'custom/intro',
+      },
+    ];
+    expect(parseIvrOptionLines(serializeIvrOptions(input))).toEqual(input);
+  });
+});
+
 describe('parseCallerIdRouteLines', () => {
   it('parses supported actions (goto_extension / goto_ivr / hangup)', () => {
     const raw = '0312345678|goto_extension|1001|VIP\n090*|hangup||\n12345|goto_ivr|9100|';

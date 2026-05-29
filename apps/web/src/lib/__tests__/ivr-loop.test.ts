@@ -57,3 +57,58 @@ describe('createIvrMenu rejects loops', () => {
     expect(() => createIvrMenu({ number: '8002', options: gotoIvr(['8001']) }, db)).toThrow(InvalidIvrError);
   });
 });
+
+describe('createIvrMenu validates play_guidance / record_message', () => {
+  let db: Database.Database;
+  beforeEach(() => {
+    db = createInMemoryDb();
+  });
+
+  it('rejects play_guidance without a guidance path', () => {
+    expect(() =>
+      createIvrMenu({ number: '8010', options: [{ digit: '1', action: 'play_guidance', target: null, label: null }] }, db),
+    ).toThrow(InvalidIvrError);
+  });
+
+  it('accepts play_guidance with a valid path', () => {
+    expect(() =>
+      createIvrMenu(
+        { number: '8011', options: [{ digit: '1', action: 'play_guidance', target: 'custom/info', label: null }] },
+        db,
+      ),
+    ).not.toThrow();
+  });
+
+  it('rejects record_message with out-of-range seconds', () => {
+    expect(() =>
+      createIvrMenu(
+        {
+          number: '8012',
+          options: [{ digit: '1', action: 'record_message', target: null, label: null, recordMaxSeconds: 1 }],
+        },
+        db,
+      ),
+    ).toThrow(InvalidIvrError);
+  });
+
+  it('persists record_message fields through create + reload', () => {
+    const m = createIvrMenu(
+      {
+        number: '8013',
+        options: [
+          {
+            digit: '1',
+            action: 'record_message',
+            target: null,
+            label: null,
+            recordMaxSeconds: 45,
+            recordIntroPath: 'custom/intro',
+          },
+        ],
+      },
+      db,
+    );
+    expect(m.options[0].recordMaxSeconds).toBe(45);
+    expect(m.options[0].recordIntroPath).toBe('custom/intro');
+  });
+});

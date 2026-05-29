@@ -27,6 +27,7 @@ import {
   type CallerIdRouteAction,
   type IvrAction,
   type IvrMenu,
+  type IvrNextAction,
   type IvrOption,
 } from '@/lib/ivr-format';
 import { ConfirmButton } from '@/components/ConfirmButton';
@@ -58,6 +59,8 @@ const ACTION_OPTIONS: { value: IvrAction; label: string }[] = [
   { value: 'goto_ringgroup', label: '着信グループへ' },
   { value: 'goto_ivr', label: '別 IVR へ' },
   { value: 'send_sms', label: 'SMS送信' },
+  { value: 'play_guidance', label: 'ガイダンス再生' },
+  { value: 'record_message', label: '伝言を録音' },
   { value: 'hangup', label: '切断' },
 ];
 
@@ -84,6 +87,16 @@ const ACTION_META: Record<
     shortLabel: 'SMS',
     badgeClass: 'bg-blue-50 text-blue-700 ring-blue-200',
     helper: '携帯番号へSMSを送信します',
+  },
+  play_guidance: {
+    shortLabel: '案内再生',
+    badgeClass: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+    helper: 'アナウンスを再生してメニューに戻る/切断します',
+  },
+  record_message: {
+    shortLabel: '録音',
+    badgeClass: 'bg-violet-50 text-accent-dark ring-violet-200',
+    helper: '発信者の伝言を録音します',
   },
   hangup: {
     shortLabel: '終了',
@@ -160,7 +173,14 @@ function defaultOptions(): OptionDraft[] {
 }
 
 function actionNeedsTarget(action: IvrAction | CallerIdRouteAction | AfterHoursAction | ''): boolean {
-  return action === 'goto_extension' || action === 'goto_ringgroup' || action === 'goto_ivr' || action === 'send_sms' || action === 'goto_voicemail';
+  return (
+    action === 'goto_extension' ||
+    action === 'goto_ringgroup' ||
+    action === 'goto_ivr' ||
+    action === 'send_sms' ||
+    action === 'goto_voicemail' ||
+    action === 'play_guidance' // target = ガイダンスの再生パス
+  );
 }
 
 export function IvrEditor({ initial, upsertAction, deleteAction, guidances = [], allMenus = [] }: Props) {
@@ -988,14 +1008,34 @@ function SortableOptionCard({ index, option, onChange, onRemove, allMenus = [], 
         </label>
 
         <label className={`${labelClass} block`}>
-          {option.action === 'send_sms' ? 'テンプレート' : '転送先'}
+          {option.action === 'send_sms'
+            ? 'テンプレート'
+            : option.action === 'play_guidance'
+              ? 'ガイダンス'
+              : option.action === 'record_message'
+                ? '(録音)'
+                : '転送先'}
           <input
             value={option.target ?? ''}
             onChange={(e) => onChange({ target: e.target.value || null })}
             disabled={!needsTarget}
-            inputMode={option.action === 'send_sms' ? 'text' : 'numeric'}
-            pattern={option.action === 'send_sms' ? '[a-z0-9_-]+' : '[0-9]{2,6}'}
-            placeholder={option.action === 'send_sms' ? 'same-day-booking' : needsTarget ? '1001' : '-'}
+            inputMode={option.action === 'send_sms' || option.action === 'play_guidance' ? 'text' : 'numeric'}
+            pattern={
+              option.action === 'send_sms'
+                ? '[a-z0-9_-]+'
+                : option.action === 'play_guidance'
+                  ? '[A-Za-z0-9_./-]+'
+                  : '[0-9]{2,6}'
+            }
+            placeholder={
+              option.action === 'send_sms'
+                ? 'same-day-booking'
+                : option.action === 'play_guidance'
+                  ? 'custom/ivr-info'
+                  : needsTarget
+                    ? '1001'
+                    : '-'
+            }
             className={`${fieldClass} font-mono`}
           />
         </label>
@@ -1009,6 +1049,46 @@ function SortableOptionCard({ index, option, onChange, onRemove, allMenus = [], 
           ×
         </button>
       </div>
+      {option.action === 'play_guidance' && (
+        <div className="border-t border-slate-100 px-3 py-2">
+          <label className={`${labelClass} block sm:max-w-xs`}>
+            再生後の動作
+            <select
+              value={option.nextAction ?? 'return_menu'}
+              onChange={(e) => onChange({ nextAction: e.target.value as IvrNextAction })}
+              className={fieldClass}
+            >
+              <option value="return_menu">メニューに戻る</option>
+              <option value="hangup">切断する</option>
+            </select>
+          </label>
+        </div>
+      )}
+      {option.action === 'record_message' && (
+        <div className="grid gap-3 border-t border-slate-100 px-3 py-2 sm:grid-cols-2">
+          <label className={`${labelClass} block`}>
+            録音秒数 (5〜300・既定60)
+            <input
+              type="number"
+              min={5}
+              max={300}
+              value={option.recordMaxSeconds ?? ''}
+              onChange={(e) => onChange({ recordMaxSeconds: e.target.value ? Number(e.target.value) : null })}
+              placeholder="60"
+              className={fieldClass}
+            />
+          </label>
+          <label className={`${labelClass} block`}>
+            録音前の案内 (任意)
+            <input
+              value={option.recordIntroPath ?? ''}
+              onChange={(e) => onChange({ recordIntroPath: e.target.value || null })}
+              placeholder="custom/ivr-callback-intro"
+              className={`${fieldClass} font-mono`}
+            />
+          </label>
+        </div>
+      )}
       <div className="border-t border-slate-100 px-3 py-2 flex items-center gap-2">
         <span className={`inline-flex items-center rounded-full px-2 py-1 text-[10px] font-bold ring-1 ${meta.badgeClass}`}>
           {meta.shortLabel}

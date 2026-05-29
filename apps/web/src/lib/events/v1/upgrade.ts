@@ -30,6 +30,7 @@ const DEFAULT_KIND_DIRECTION: Record<EventKind, CallDirection> = {
   internal_call: 'internal',
   voicemail: 'inbound',
   missed_call: 'inbound',
+  ivr_recorded_message: 'inbound',
 };
 
 function inferKind(raw: string): EventKind {

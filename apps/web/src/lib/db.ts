@@ -125,11 +125,14 @@ CREATE TABLE IF NOT EXISTS ivr_menus (
 );
 
 CREATE TABLE IF NOT EXISTS ivr_options (
-  ivr_menu_id  INTEGER NOT NULL REFERENCES ivr_menus(id) ON DELETE CASCADE,
-  digit        TEXT NOT NULL,
-  action       TEXT NOT NULL,
-  target       TEXT,
-  label        TEXT,
+  ivr_menu_id        INTEGER NOT NULL REFERENCES ivr_menus(id) ON DELETE CASCADE,
+  digit              TEXT NOT NULL,
+  action             TEXT NOT NULL,
+  target             TEXT,
+  label              TEXT,
+  next_action        TEXT,     -- play_guidance: 'return_menu' | 'hangup'
+  record_max_seconds INTEGER,  -- record_message: 録音最大秒 (既定 60)
+  record_intro_path  TEXT,     -- record_message: 録音前アナウンス custom/*
   PRIMARY KEY (ivr_menu_id, digit)
 );
 
@@ -413,6 +416,18 @@ function migrateIvrMenus(db: Database.Database): void {
   }
   if (!names.has('after_hours_target')) {
     db.exec(`ALTER TABLE ivr_menus ADD COLUMN after_hours_target TEXT`);
+  }
+  // ivr_options への play_guidance / record_message 用列 (NULL で既存行は無影響)。
+  const optCols = db.prepare(`PRAGMA table_info(ivr_options)`).all() as Array<{ name: string }>;
+  const optNames = new Set(optCols.map((c) => c.name));
+  if (!optNames.has('next_action')) {
+    db.exec(`ALTER TABLE ivr_options ADD COLUMN next_action TEXT`);
+  }
+  if (!optNames.has('record_max_seconds')) {
+    db.exec(`ALTER TABLE ivr_options ADD COLUMN record_max_seconds INTEGER`);
+  }
+  if (!optNames.has('record_intro_path')) {
+    db.exec(`ALTER TABLE ivr_options ADD COLUMN record_intro_path TEXT`);
   }
 }
 

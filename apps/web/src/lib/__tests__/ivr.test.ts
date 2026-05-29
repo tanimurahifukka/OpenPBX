@@ -229,4 +229,53 @@ describe('renderIvrDialplan', () => {
     ]);
     expect(out).toContain('Set(SMS_TEMPLATE=callback-confirm)');
   });
+
+  function lineAfter(out: string, needle: string): string {
+    const lines = out.split('\n');
+    const idx = lines.findIndex((l) => l.includes(needle));
+    return idx >= 0 ? lines[idx + 1] : '';
+  }
+
+  it('play_guidance plays the guidance then returns to menu by default', () => {
+    const out = renderIvrDialplan([
+      fixtureMenu({ options: [{ digit: '1', action: 'play_guidance', target: 'custom/info', label: null }] }),
+    ]);
+    expect(out).toContain('Playback(custom/info)');
+    expect(lineAfter(out, 'Playback(custom/info)')).toContain('Goto(menu,1)');
+  });
+
+  it('play_guidance with nextAction hangup ends the call after the announcement', () => {
+    const out = renderIvrDialplan([
+      fixtureMenu({
+        options: [{ digit: '1', action: 'play_guidance', target: 'custom/info', label: null, nextAction: 'hangup' }],
+      }),
+    ]);
+    expect(lineAfter(out, 'Playback(custom/info)')).toContain('Hangup()');
+  });
+
+  it('record_message records the caller and tags the event kind', () => {
+    const out = renderIvrDialplan([
+      fixtureMenu({ options: [{ digit: '2', action: 'record_message', target: null, label: null, recordMaxSeconds: 45 }] }),
+    ]);
+    expect(out).toContain('Set(EVENT_KIND=ivr_recorded_message)');
+    expect(out).toContain('Record(${RECORD_FILE},3,45,k)');
+  });
+
+  it('record_message defaults to 60 seconds when unset', () => {
+    const out = renderIvrDialplan([
+      fixtureMenu({ options: [{ digit: '2', action: 'record_message', target: null, label: null }] }),
+    ]);
+    expect(out).toContain('Record(${RECORD_FILE},3,60,k)');
+  });
+
+  it('emits a context-local h handler only when a menu has a record_message option', () => {
+    const withRecord = renderIvrDialplan([
+      fixtureMenu({ options: [{ digit: '2', action: 'record_message', target: null, label: null }] }),
+    ]);
+    expect(withRecord).toContain('exten => h,1,NoOp(IVR 9000 hangup');
+    expect(withRecord).toContain('notify-event.sh');
+
+    const withoutRecord = renderIvrDialplan([fixtureMenu()]);
+    expect(withoutRecord).not.toContain('exten => h,1');
+  });
 });
