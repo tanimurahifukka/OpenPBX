@@ -251,8 +251,15 @@ export async function pushPending(
   return result;
 }
 
+/** 1 tick ぶんの push を実行する。テストでスパイ可能なよう export する。 */
+export function runPushTick(): void {
+  pushPending().catch((e) => console.error('[event-v1] push error', e));
+}
+
 const KEY = '__commandRoomEventV1Push';
 export function startEventV1PushLoop(): void {
+  const g = globalThis as unknown as Record<string, NodeJS.Timeout | undefined>;
+  if (g[KEY]) return;
   const cfg = resolveEmitConfig();
   if (!cfg) {
     const missing = describeMissingEmitConfig();
@@ -260,14 +267,11 @@ export function startEventV1PushLoop(): void {
       `[event-v1] push disabled. set the following env to enable: ${missing.join(', ')}` +
         ' (outbox は積まれ続け、設定後の最初の tick で送られる)',
     );
-    return;
   }
-  const g = globalThis as unknown as Record<string, NodeJS.Timeout | undefined>;
-  if (g[KEY]) return;
   g[KEY] = setInterval(() => {
-    pushPending(cfg).catch((e) => console.error('[event-v1] push error', e));
+    runPushTick();
   }, 15_000);
-  pushPending(cfg).catch((e) => console.error('[event-v1] initial push error', e));
+  runPushTick();
 }
 
 export function stopEventV1PushLoop(): void {
